@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "baseUrl": ".",                    // Required for path aliases
+    "paths": {
+      "@/*": ["app/*"],               // Import from app folder
+      "@components/*": ["app/components/*"],
+      "@lib/*": ["app/lib/*"],
+      "@styles/*": ["app/styles/*"],
+      "@hooks/*": ["app/hooks/*"]
+    },
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "types/**/*.d.ts", ".next/types/**/*.ts"]
+,
+  "exclude": ["node_modules"]
+}
