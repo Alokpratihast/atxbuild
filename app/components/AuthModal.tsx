@@ -19,7 +19,7 @@ export default function AuthModal() {
     <Dialog open={isOpen} onOpenChange={closeModal}>
       <DialogContent className="sm:max-w-[400px] p-0">
         <DialogHeader>
-          <DialogTitle className="text-center">Authentication</DialogTitle>
+          <DialogTitle className="text-center"></DialogTitle>
         </DialogHeader>
         <div className="p-4">
           <AuthPage />
