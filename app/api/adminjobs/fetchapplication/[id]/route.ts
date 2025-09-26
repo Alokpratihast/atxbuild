@@ -30,7 +30,8 @@ if (!session || !["admin","superadmin"].includes(session.user.role)) {
     const application = await Application.findById(id).populate(
       "jobId",
       "title company location deadline"
-    );
+    )
+    .populate("userId","first and last name")
 
     if (!application) {
       return NextResponse.json({ success: false, error: "Application not found" }, { status: 404 });

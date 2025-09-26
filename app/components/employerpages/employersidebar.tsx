@@ -32,7 +32,7 @@ export default function EmployerSidebar() {
 
   const handleLogout = async () => {
     await signOut({ redirect: false });
-    router.push("/");
+    router.replace("/");
   };
 
   return (

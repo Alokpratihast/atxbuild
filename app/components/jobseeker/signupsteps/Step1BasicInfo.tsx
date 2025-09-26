@@ -2,9 +2,11 @@
 
 import { useFormContext, FieldError, FieldErrors, Merge } from "react-hook-form";
 
+
+
+
 /**
  * Helper function to safely get the error message from react-hook-form's errors object.
- * Handles FieldError, Merge<FieldError, FieldErrors>, or undefined.
  */
 const getErrorMessage = (error?: FieldError | Merge<FieldError, FieldErrors<any>> | string) => {
   if (!error) return "";
@@ -14,9 +16,7 @@ const getErrorMessage = (error?: FieldError | Merge<FieldError, FieldErrors<any>
 
 /**
  * Step1BasicInfo Component
- * Renders a form section to capture basic user information including:
- * first name, last name, location, contact number, email, password, and DOB.
- * Uses react-hook-form context for form state management.
+ 
  */
 export default function Step1BasicInfo() {
   const {
@@ -58,9 +58,17 @@ export default function Step1BasicInfo() {
         {/* Contact Number */}
         <InputField
           label="Contact Number"
+          type="tel"
+          inputMode="numeric"
           placeholder="Enter your contact number"
           error={getErrorMessage(errors.contactNumber)}
-          registerProps={register("contactNumber", { required: "Contact Number is required" })}
+          registerProps={register("contactNumber", {
+            required: "Contact Number is required",
+            pattern: {
+              value: /^[0-9]{10}$/,
+              message: "Contact Number must be exactly 10 digits",
+            },
+          })}
         />
 
         {/* Email */}
@@ -69,7 +77,13 @@ export default function Step1BasicInfo() {
           type="email"
           placeholder="Enter your email address"
           error={getErrorMessage(errors.email)}
-          registerProps={register("email", { required: "Email is required" })}
+          registerProps={register("email", {
+            required: "Email is required",
+            pattern: {
+              value: /^[a-zA-Z0-9._%+-]+@gmail\.com$/,
+              message: "Email must be a valid @gmail.com address",
+            },
+          })}
         />
 
         {/* Password */}
@@ -78,7 +92,13 @@ export default function Step1BasicInfo() {
           type="password"
           placeholder="Enter your password"
           error={getErrorMessage(errors.password)}
-          registerProps={register("password", { required: "Password is required" })}
+          registerProps={register("password", {
+            required: "Password is required",
+            minLength: {
+              value: 8,
+              message: "Password must be at least 8 characters",
+            },
+          })}
         />
 
         {/* Date of Birth */}
@@ -104,6 +124,8 @@ interface InputFieldProps {
   placeholder?: string;
   error?: string;
   registerProps: any;
+  inputMode?: "text" | "numeric" | "decimal" | "tel" | "email" | "url"; // <-- add inputMode
+  onInput?: (e: React.FormEvent<HTMLInputElement>) => void; 
 }
 
 const InputField = ({ label, type = "text", placeholder, error, registerProps }: InputFieldProps) => (
@@ -113,9 +135,8 @@ const InputField = ({ label, type = "text", placeholder, error, registerProps }:
       type={type}
       {...registerProps}
       placeholder={placeholder}
-      className={`w-full px-4 py-2 rounded-lg border ${
-        error ? "border-red-500" : "border-gray-300"
-      } focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition`}
+      className={`w-full px-4 py-2 rounded-lg border ${error ? "border-red-500" : "border-gray-300"
+        } focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition`}
     />
     {error && <p className="text-red-500 text-xs">{error}</p>}
   </div>

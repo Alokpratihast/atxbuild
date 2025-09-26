@@ -1,3 +1,5 @@
+//api/jobseekerprofile
+
 export const dynamic = "force-dynamic";
 
 
@@ -6,7 +8,8 @@ import mongoose from "mongoose";
 import JobSeeker from "@/models/jobseeker";
 import { connectedToDatabase } from "@/lib/db";
 import ImageKit from "imagekit";
-
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 
 const imagekit = new ImageKit({
@@ -20,12 +23,22 @@ export async function GET(req: NextRequest) {
   try {
     await connectedToDatabase();
 
-    // Get user ID from headers only
-    const userId = req.headers.get("x-user-id");
+     // ✅ Use session for secure user identification
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
+
+     const userId = session.user.id;
+    
+    
     if (!userId) return NextResponse.json({ success: false, error: "User ID is required" }, { status: 400 });
     if (!mongoose.Types.ObjectId.isValid(userId)) return NextResponse.json({ success: false, error: "Invalid User ID" }, { status: 400 });
 
-    const jobSeeker = await JobSeeker.findById(userId);
+     const jobSeeker = await JobSeeker.findById(userId).select(
+      "firstName lastName email contactNumber coverLetter resume"
+    );
     if (!jobSeeker) return NextResponse.json({ success: false, error: "Profile not found" }, { status: 404 });
 
     return NextResponse.json({ success: true, jobSeeker });
@@ -39,9 +52,16 @@ export async function GET(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     await connectedToDatabase();
+    // ✅ Get user from session
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  }
+  
+  const userId = session.user.id; // use session user ID, ignore any userId in formData
 
     const formData = await req.formData();
-    const userId = formData.get("userId")?.toString();
+    
     if (!userId) return NextResponse.json({ success: false, error: "User ID is required" }, { status: 400 });
     if (!mongoose.Types.ObjectId.isValid(userId)) return NextResponse.json({ success: false, error: "Invalid User ID" }, { status: 400 });
 

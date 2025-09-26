@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     const newApp = await Application.create({
       jobId: new mongoose.Types.ObjectId(jobId),
       userId: new mongoose.Types.ObjectId(session.user.id),
-      name: session.user.name || "Anonymous",
+      name: `${session.user.firstName} ${session.user.lastName}`.trim() || "Anonymous",
       email: session.user.email,
       title: job.title,
       company: job.company,
@@ -100,6 +100,7 @@ export async function GET() {
       userId: new mongoose.Types.ObjectId(session.user.id),
     })
       .populate("jobId", "title company location deadline")
+      .populate("userId", "name email")
       .sort({ appliedAt: -1 });
 
     return NextResponse.json({ success: true, applications });

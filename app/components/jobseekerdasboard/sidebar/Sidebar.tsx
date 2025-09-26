@@ -1,16 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, LogOut } from "lucide-react";
+import { signOut } from "next-auth/react";
 import SidebarHeader from "./SidebarHeader";
 import SidebarMenu from "./SidebarMenu";
-import SidebarFooter from "./SidebarFooter";
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleSidebar = () => setIsOpen(!isOpen);
   const closeSidebar = () => setIsOpen(false);
+
+  const handleLogout = async () => {
+    await signOut({ redirect: false });
+    window.location.replace ("/"); // force redirect to home
+  };
 
   return (
     <>
@@ -59,9 +64,15 @@ export default function Sidebar() {
           <SidebarMenu onNavigate={closeSidebar} />
         </div>
 
-        {/* Footer */}
-        <div className="border-t border-gray-200 dark:border-gray-700">
-          <SidebarFooter />
+        {/* 🔹 Logout Button directly */}
+        <div className="mt-auto px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+          <button
+            onClick={handleLogout}
+            className="flex items-center justify-center gap-2 w-full py-2 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+          >
+            <LogOut size={16} />
+            Logout
+          </button>
         </div>
       </aside>
     </>

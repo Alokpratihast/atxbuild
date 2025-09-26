@@ -18,6 +18,7 @@ export interface IApplication extends Document {
   shortlisted: boolean;
 }
 
+
 const ApplicationSchema = new Schema<IApplication>(
   {
     jobId: { type: Schema.Types.ObjectId, ref: "Job", required: true },

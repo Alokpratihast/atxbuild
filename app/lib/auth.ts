@@ -112,7 +112,7 @@ CredentialsProvider({
   session: { strategy: "jwt" },
 
   pages: {
-    signIn: "/employerform/login", // optional: custom login page
+    signIn: "/", // optional: custom login page
   },
 
   callbacks: {

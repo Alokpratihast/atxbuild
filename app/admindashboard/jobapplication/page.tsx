@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { FiEdit, FiTrash2 } from "react-icons/fi";
-import JobFormModal, { Job } from "@/components/Admin/JobFormModal";
+import JobFormModal, { Job } from "@/components/Admin/jobadmin/JobFormModal";
+
+
 
 export default function JobDashboard() {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -17,6 +19,7 @@ export default function JobDashboard() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingJob, setEditingJob] = useState<Job | null>(null);
+  
 
   // Fetch jobs from API
   const fetchJobs = async () => {
@@ -116,9 +119,9 @@ export default function JobDashboard() {
   };
 
   return (
-    <div className="p-6">
+    <div className="mx-auto max-w-5xl p-10   ">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center  ">
         <h1 className="text-2xl font-bold">Job Management</h1>
         <button
           onClick={() => {

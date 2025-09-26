@@ -33,7 +33,7 @@ export default function ApplyModal({ job, onClose }: ApplyModalProps) {
     const fetchProfile = async () => {
       if (!session?.user?.id) return;
       try {
-        const res = await fetch(`/api/jobseekerprofile?user-id=${session.user.id}`);
+        const res = await fetch(`/api/jobseekerprofile`);
         const data = await res.json();
         if (data.success && data.jobSeeker) {
           const js = data.jobSeeker;
@@ -132,7 +132,6 @@ export default function ApplyModal({ job, onClose }: ApplyModalProps) {
     try {
       const data = new FormData();
       data.append("jobId", job._id || job.id);
-      data.append("userId", session.user.id);
       data.append("name", formData.name);
       data.append("email", formData.email);
       data.append("contactNumber", formData.contactNumber);
@@ -199,6 +198,7 @@ export default function ApplyModal({ job, onClose }: ApplyModalProps) {
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Make name & email readonly */}
           <input
             name="name"
             value={formData.name}
@@ -206,6 +206,7 @@ export default function ApplyModal({ job, onClose }: ApplyModalProps) {
             placeholder="Full Name"
             className="w-full border border-gray-300 dark:border-gray-700 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
+            readOnly
           />
           <input
             name="email"
@@ -215,6 +216,7 @@ export default function ApplyModal({ job, onClose }: ApplyModalProps) {
             placeholder="Email"
             className="w-full border border-gray-300 dark:border-gray-700 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
+            readOnly
           />
           <input
             name="contactNumber"

@@ -80,8 +80,8 @@ export default function EmployerAuthForm() {
       } else {
         setMessage("✅ Login successful! Redirecting...");
         setTimeout(() => {
-          router.push("/employerdashboard"); // redirect to dashboard
         }, 1000);
+        router.push("/employerdashboard"); // redirect to dashboard
       }
       setLoading(false);
     }

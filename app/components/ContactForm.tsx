@@ -11,7 +11,15 @@ const contactSchema = z.object({
   firstName: z.string().min(1, "First Name is required"),
   lastName: z.string().min(1, "Last Name is required"),
   email: z.string().email("Invalid email"),
-  phone: z.string().min(10, "Phone number is required"),
+  phone: z
+    .string()
+    .min(10, "Phone number must be at least 10 digits")
+    .max(15, "Phone number must be at most 15 digits")
+    .regex(
+      /^[+]?[\d]{10,15}$/,
+      "Phone number must contain only digits and optionally start with +"
+    ),
+
   service: z.string().min(1, "Select a service"),
   projectDescription: z.string().min(1, "Project description is required"),
   updates: z.boolean(),
@@ -152,6 +160,11 @@ export default function ProjectContactForm() {
             {...register("phone")}
             type="tel"
             placeholder="Phone Number *"
+            maxLength={15}
+            onInput={(e) => {
+              const target = e.target as HTMLInputElement;
+              target.value = target.value.replace(/[^0-9+]/g, ""); // only allow digits and '+'
+            }}
             className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <Phone className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />

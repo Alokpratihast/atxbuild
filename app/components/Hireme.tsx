@@ -38,7 +38,7 @@ export default function Hireme() {
         </p>
         <button
           className="px-5 py-2.5 bg-gradient-to-r from-green-600 to-teal-600 text-white font-medium rounded-lg hover:opacity-90 transition"
-          onClick={() => router.push("/employerform/employerform")}
+          onClick={() => router.push("/employerlogin/employerloginform")}
         >
           Post a Job
         </button>

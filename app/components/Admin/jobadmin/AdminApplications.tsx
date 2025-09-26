@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { FiTrash2 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import ApplicantProfileModal from "@/components/Admin/jobadmin/viewprofilemodal";
+
 
 // -------------------------------
 // Types
@@ -41,6 +43,9 @@ export default function AdminApplications() {
   const [statusFilter, setStatusFilter] = useState<"" | Application["status"]>("");
   const [sortBy, setSortBy] = useState<"date" | "name">("date");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [selectedApplicantId, setSelectedApplicantId] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const router = useRouter();
 
   // -------------------------------
@@ -153,6 +158,17 @@ export default function AdminApplications() {
         : a.name.localeCompare(b.name)
     );
 
+
+  const handleApplicationUpdate = (updatedApp: Application) => {
+  setApplications((prev) =>
+    prev.map((app) => (app._id === updatedApp._id ? updatedApp : app))
+  );
+};
+
+const handleApplicationDelete = (id: string) => {
+  setApplications((prev) => prev.filter((app) => app._id !== id));
+};
+
   // -------------------------------
   // Render
   // -------------------------------
@@ -260,11 +276,15 @@ export default function AdminApplications() {
                       {/* Actions */}
                       <td className="px-3 py-2 flex gap-2">
                         <button
-                          onClick={() => router.push(`/admindashboard/jobapplication/${app._id}`)}
+                          onClick={() => {
+                            setSelectedApplicantId(app._id);
+                            setIsModalOpen(true);
+                          }}
                           className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm"
                         >
                           View Profile
                         </button>
+
 
                         {app.status !== "Shortlisted" && (
                           <button
@@ -281,17 +301,29 @@ export default function AdminApplications() {
                           className="bg-red-500 text-white p-2 rounded hover:bg-red-600 transition"
                           title="Delete"
                         >
-                          <FiTrash2 />
+                          <FiTrash2/>
                         </button>
                       </td>
                     </tr>
                   ))}
+
                 </tbody>
               </table>
             </div>
           )}
+
         </div>
       ))}
+       {/* Modal for viewing applicant profile */}
+      <ApplicantProfileModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        applicantId={selectedApplicantId}
+         onUpdate={handleApplicationUpdate}
+      onDelete={handleApplicationDelete}
+      />
+
+
     </div>
   );
 }

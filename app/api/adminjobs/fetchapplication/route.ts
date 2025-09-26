@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
     // Fetch all applications + populate job details
     const applications = await Application.find()
       .populate("jobId", "title company location deadline")
+      .populate("userId","firstName lastName ")
       .sort({ appliedAt: -1 });
 
     return NextResponse.json({ success: true, applications });
@@ -33,3 +34,37 @@ export async function GET(req: NextRequest) {
   }
 }
 console.log("API HIT: /api/fetchjobapplication");
+
+
+export async function POST(req: Request) {
+  try {
+    await connectedToDatabase();
+
+    const formData = await req.formData();
+
+    const jobId = formData.get("jobId") as string;
+    const userId = formData.get("userId") as string;
+    const name = formData.get("name") as string;
+    const email = formData.get("email") as string;
+    const contactNumber = formData.get("contactNumber") as string;
+    const coverLetter = formData.get("coverLetter") as string;
+
+    // ⚡ Save application
+    const application = await Application.create({
+      jobId,
+      userId,
+      name,
+      email,
+      contactNumber,
+      coverLetter,
+    });
+
+    return NextResponse.json({ success: true, application });
+  } catch (error: any) {
+    console.error("Error saving application:", error);
+    return NextResponse.json(
+      { success: false, error: error.message || "Failed to apply" },
+      { status: 500 }
+    );
+  }
+}

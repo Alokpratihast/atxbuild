@@ -30,7 +30,7 @@ export async function connectedToDatabase() {
     cached.promise = mongoose
       .connect(MONGODB_URI, { bufferCommands: false, maxPoolSize: 20 })
       .then((mongoose) => {
-        console.log("[DB] Connection established");
+        console.log("[DB] Connection established-2");
         return mongoose;
       })
       .catch((err) => {

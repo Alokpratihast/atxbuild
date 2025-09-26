@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
 
     await connectedToDatabase();
 
-    const { search, page = "1", limit = "5", sortBy, sortOrder, filter } =
+    const { search, page = "1", limit = "8", sortBy, sortOrder, filter } =
       Object.fromEntries(new URL(req.url).searchParams);
 
     const query: any = {};
