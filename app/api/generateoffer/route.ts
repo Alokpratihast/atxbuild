@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
 
     // Generate PDF with Puppeteer
     const browser = await puppeteer.launch({
-      headless: true,
+      headless:true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
     const page = await browser.newPage();
@@ -94,6 +94,10 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("Error generating offer letter:", error);
-    return NextResponse.json({ success: false, error: "Failed to generate offer letter" }, { status: 500 });
+
+    return NextResponse.json(
+      { success: false,error: error instanceof Error ? error.message : String(error), },
+      { status: 500 }
+  )
   }
 }

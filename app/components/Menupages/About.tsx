@@ -120,7 +120,7 @@ export default function AboutPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
             {[
               { img: "/abhaysir2.png", name: "Abhay Singh", role: " IT head & Solution architect & Delivery ", bio: "Drives IT strategy and secure operations, architects scalable solutions, and ensures successful, on-time project delivery." },
-              { img: "/sankalp.jpg", name: "Sankalp Shinde(Definate)", role: "Applications software engineer", bio: "Specialist in cross-platform app development." },
+              { img: "/sankalp.jpg", name: "Sankalp Shinde", role: "Applications software engineer", bio: "Specialist in cross-platform app development." },
               { img: "/anant office.jpg", name: "Anant Sharma", role: "Associate software engineer", bio: "Expert in mobile and app building solutions" },
               { img: "/jaydeep.jpg", name: "Jaydeep Sharma", role: "Quality analyst", bio: "Creative leader shaping engaging user experiences." },
               { img: "/vankates2.jpg", name: "Vankatesh kurapti", role: "Marketing Associate", bio: " Recruitment, Operations & Marketing" },
