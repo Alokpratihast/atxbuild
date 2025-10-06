@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from "react";
@@ -13,6 +14,7 @@ export default function GenerateOffer({ template, onClose }: Props) {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
+  // Extract all placeholders like {{candidateName}}, {{joiningDate}}, etc.
   const placeholders = Array.from(template.content.matchAll(/{{(.*?)}}/g)).map(
     ([_, k]) => k.trim()
   );
@@ -25,6 +27,12 @@ export default function GenerateOffer({ template, onClose }: Props) {
     const missing = placeholders.filter(p => !formData[p]?.trim());
     if (missing.length) {
       toast.error(`Please fill all fields: ${missing.join(", ")}`);
+      return;
+    }
+
+    // ✅ Validate joiningDate format (YYYY-MM-DD)
+    if (formData.joiningDate && !/^\d{4}-\d{2}-\d{2}$/.test(formData.joiningDate)) {
+      toast.error("Joining Date must be in YYYY-MM-DD format (e.g., 2025-10-06)");
       return;
     }
 
@@ -48,8 +56,8 @@ export default function GenerateOffer({ template, onClose }: Props) {
       a.remove();
       window.URL.revokeObjectURL(url);
 
-      toast.success("Offer letter generated!");
-      onClose(); // ✅ close modal automatically
+      toast.success("Offer letter generated successfully!");
+      onClose();
     } catch (err) {
       console.error(err);
       toast.error("Failed to generate offer letter");
@@ -61,8 +69,11 @@ export default function GenerateOffer({ template, onClose }: Props) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-start z-50 overflow-auto p-4">
       <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl space-y-5 border border-gray-200 mt-10 mb-10">
+        {/* Header */}
         <div className="flex justify-between items-center mb-4 sticky top-0 bg-white z-10">
-          <h2 className="text-2xl font-bold text-gray-800">Generate Offer: {template.role}</h2>
+          <h2 className="text-2xl font-bold text-gray-800">
+            Generate Offer: {template.role}
+          </h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition text-2xl font-bold"
@@ -71,14 +82,21 @@ export default function GenerateOffer({ template, onClose }: Props) {
           </button>
         </div>
 
+        {/* Dynamic Inputs */}
         <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-2">
-          {placeholders.map(key => (
+          {placeholders.map((key,index) => (
             <div key={key} className="flex flex-col">
               <label className="text-gray-700 font-medium mb-1">
-                {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                {key
+                  .replace(/([A-Z])/g, " $1")
+                  .replace(/^./, (str) => str.toUpperCase())}
               </label>
+
+              {/* ✅ Dynamic input type based on placeholder */}
               <input
-                type="text"
+                type={key === "joiningDate" ? "date" : "text"}
+                inputMode={key === "joiningDate" ? "numeric" : undefined}
+                pattern={key === "joiningDate" ? "\\d*" : undefined}
                 placeholder={key}
                 className="w-full border border-gray-300 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                 value={formData[key] || ""}
@@ -88,6 +106,7 @@ export default function GenerateOffer({ template, onClose }: Props) {
           ))}
         </div>
 
+        {/* Buttons */}
         <div className="flex justify-end gap-3 mt-4">
           <button
             className="px-5 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition font-medium"

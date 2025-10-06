@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useForm, FormProvider, SubmitHandler } from "react-hook-form";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -12,7 +12,15 @@ import Step3Skills from "./signupsteps/Step3Skills";
 import Step4Experience from "./signupsteps/Step4Experience";
 import Step5Files from "./signupsteps/Step5UploadResume";
 
-type FormValues = {
+export type FileWithProgress = {
+  id: string;
+  file: File;
+  progress: number;
+  uploadedUrl?: string;
+  error?: string;
+};
+
+export type FormValues = {
   firstName: string;
   lastName: string;
   location: string;
@@ -29,8 +37,8 @@ type FormValues = {
   noticePeriod: number;
   skills: { name: string; rating: number }[];
   experience: { company: string; role: string; duration: number }[];
-  resume: File[];
-  coverLetter?: File[];
+  resume: FileWithProgress[];
+  coverLetter?: FileWithProgress[];
 };
 
 export default function JobSeekerMultiStepForm() {
@@ -44,30 +52,27 @@ export default function JobSeekerMultiStepForm() {
       skills: [{ name: "", rating: 1 }],
       experience: [{ company: "", role: "", duration: 0 }],
       workPreference: "",
+      resume: [],
+      coverLetter: [],
     },
     mode: "onBlur",
   });
 
-  const uploadFile = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const res = await fetch("/api/uploadresume", { method: "POST", body: formData });
-    const result = await res.json();
-    if (!res.ok) throw new Error(result.error || "Upload failed");
-    return result.url;
-  };
-
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     try {
-      // Upload files
-      const resumeUrl = data.resume?.[0] ? await uploadFile(data.resume[0]) : "";
-      const coverLetterUrl = data.coverLetter?.[0] ? await uploadFile(data.coverLetter[0]) : "";
+      const resumeUrl = data.resume?.[0]?.uploadedUrl || "";
+      const coverLetterUrls = data.coverLetter?.map((f) => f.uploadedUrl).filter(Boolean) || [];
 
-      const payload = { ...data, resume: resumeUrl, coverLetter: coverLetterUrl };
+      if (!resumeUrl) {
+        alert("Please upload your resume before submitting.");
+        return;
+      }
+
+      const payload = { ...data, resume: resumeUrl, coverLetter: coverLetterUrls.length ? coverLetterUrls : undefined };
+
 
       if (session?.user?.id) {
-        // Update existing logged-in user profile
+        // Update existing profile
         const res = await fetch(`/api/jobseekerprofile/${session.user.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -75,7 +80,7 @@ export default function JobSeekerMultiStepForm() {
         });
         const result = await res.json();
         if (result.success) {
-          alert("✅ Your profile has been updated with uploaded files!");
+          alert("✅ Profile updated successfully!");
           router.push("/jobseekerdashboard");
         } else {
           alert(result.error || "Failed to update profile.");
@@ -89,12 +94,12 @@ export default function JobSeekerMultiStepForm() {
         });
         const result = await res.json();
         if (result.success) {
-          alert("✅ Job seeker registered successfully! Please login.");
+          alert("✅ Registered successfully! Please login.");
           methods.reset();
           setStep(0);
           setMode("login");
         } else {
-          alert(result.error || "Failed to save job seeker.");
+          alert(result.error || "Failed to register.");
         }
       }
     } catch (err) {
@@ -117,10 +122,26 @@ export default function JobSeekerMultiStepForm() {
         {/* Mode Toggle */}
         <div className="flex justify-center gap-8 mb-8">
           <label className="flex items-center gap-2 cursor-pointer font-medium text-gray-700">
-            <input type="radio" name="mode" value="register" checked={mode === "register"} onChange={() => setMode("register")} className="accent-indigo-600" /> Register
+            <input
+              type="radio"
+              name="mode"
+              value="register"
+              checked={mode === "register"}
+              onChange={() => setMode("register")}
+              className="accent-indigo-600"
+            />
+            Register
           </label>
           <label className="flex items-center gap-2 cursor-pointer font-medium text-gray-700">
-            <input type="radio" name="mode" value="login" checked={mode === "login"} onChange={() => setMode("login")} className="accent-indigo-600" /> Already have an account
+            <input
+              type="radio"
+              name="mode"
+              value="login"
+              checked={mode === "login"}
+              onChange={() => setMode("login")}
+              className="accent-indigo-600"
+            />
+            Already have an account
           </label>
         </div>
 
@@ -130,18 +151,36 @@ export default function JobSeekerMultiStepForm() {
             <div className="flex items-center justify-between mb-10 relative">
               {steps.map((_, idx) => (
                 <div key={idx} className="flex-1 relative">
-                  <div className={`w-10 h-10 mx-auto rounded-full flex items-center justify-center font-semibold shadow-md ${step === idx ? "bg-indigo-600 text-white" : idx < step ? "bg-green-500 text-white" : "bg-gray-200 text-gray-700"}`}>
+                  <div
+                    className={`w-10 h-10 mx-auto rounded-full flex items-center justify-center font-semibold shadow-md ${
+                      step === idx
+                        ? "bg-indigo-600 text-white"
+                        : idx < step
+                        ? "bg-green-500 text-white"
+                        : "bg-gray-200 text-gray-700"
+                    }`}
+                  >
                     {idx + 1}
                   </div>
                   {idx < steps.length - 1 && (
-                    <div className={`absolute top-1/2 left-1/2 w-full h-1 -translate-y-1/2 ${idx < step ? "bg-green-500" : "bg-gray-200"}`} />
+                    <div
+                      className={`absolute top-1/2 left-1/2 w-full h-1 -translate-y-1/2 ${
+                        idx < step ? "bg-green-500" : "bg-gray-200"
+                      }`}
+                    />
                   )}
                 </div>
               ))}
             </div>
 
+            {/* Form */}
             <form
-              onSubmit={methods.handleSubmit((data) => step === steps.length - 1 && onSubmit(data))}
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (step === steps.length - 1) {
+                  methods.handleSubmit(onSubmit)(e);
+                }
+              }}
             >
               <AnimatePresence mode="wait">
                 <motion.div
@@ -158,46 +197,69 @@ export default function JobSeekerMultiStepForm() {
               {/* Navigation */}
               <div className="flex justify-between pt-6">
                 {step > 0 ? (
-                  <button type="button" onClick={() => setStep(step - 1)} className="px-5 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200">← Previous</button>
-                ) : <div />}
+                  <button
+                    type="button"
+                    onClick={() => setStep(step - 1)}
+                    className="px-5 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200"
+                  >
+                    ← Previous
+                  </button>
+                ) : (
+                  <div />
+                )}
 
                 {step < steps.length - 1 ? (
                   <button
                     type="button"
                     onClick={async () => {
-                      let isValid = false;
-                      if (step === 4) {
-                        isValid = await methods.trigger("resume");
-                      } else {
-                        isValid = await methods.trigger();
-                      }
+                      const isValid =
+                        step === 4
+                          ? await methods.trigger("resume")
+                          : await methods.trigger();
                       if (isValid) setStep(step + 1);
                     }}
                     className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
                   >
-                    Next → 
+                    Next →
                   </button>
                 ) : (
-                  <button type="submit" className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">✅ Submit</button>
+                  <button
+                    type="button"
+                    onClick={methods.handleSubmit(onSubmit)}
+                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  >
+                    ✅ Submit
+                  </button>
                 )}
               </div>
             </form>
           </>
         ) : (
-          // Login
+          // Login Section
           <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md mx-auto border border-gray-100">
-            <h2 className="text-2xl font-semibold mb-6 text-center text-gray-800">Login to Your Account</h2>
+            <h2 className="text-2xl font-semibold mb-6 text-center text-gray-800">
+              Login to Your Account
+            </h2>
             <form
               className="space-y-4"
               onSubmit={async (e) => {
                 e.preventDefault();
-                const email = (e.currentTarget.elements.namedItem("email") as HTMLInputElement).value;
-                const password = (e.currentTarget.elements.namedItem("password") as HTMLInputElement).value;
+                const email = (e.currentTarget.elements.namedItem(
+                  "email"
+                ) as HTMLInputElement).value;
+                const password = (e.currentTarget.elements.namedItem(
+                  "password"
+                ) as HTMLInputElement).value;
                 try {
-                  const res = await signIn("jobseeker-login", { redirect: false, email, password });
+                  const res = await signIn("jobseeker-login", {
+                    redirect: false,
+                    email,
+                    password,
+                  });
                   if (res?.error) return alert(res.error || "Invalid credentials");
                   const session = await getSession();
-                  if (session?.user?.id) localStorage.setItem("jobSeekerId", session.user.id);
+                  if (session?.user?.id)
+                    localStorage.setItem("jobSeekerId", session.user.id);
                   alert("✅ Logged in successfully!");
                   router.push("/jobseekerdashboard");
                 } catch (err) {
@@ -206,9 +268,26 @@ export default function JobSeekerMultiStepForm() {
                 }
               }}
             >
-              <input type="email" name="email" placeholder="Email" className="border p-3 w-full rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm" required />
-              <input type="password" name="password" placeholder="Password" className="border p-3 w-full rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm" required />
-              <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700">Login</button>
+              <input
+                type="email"
+                name="email"
+                placeholder="Email"
+                className="border p-3 w-full rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                required
+              />
+              <input
+                type="password"
+                name="password"
+                placeholder="Password"
+                className="border p-3 w-full rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                required
+              />
+              <button
+                type="submit"
+                className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700"
+              >
+                Login
+              </button>
             </form>
           </div>
         )}
