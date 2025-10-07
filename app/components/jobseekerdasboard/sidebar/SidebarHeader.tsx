@@ -7,7 +7,7 @@ export default function SidebarHeader() {
 
   if (status === "loading") return <p className="p-4">Loading...</p>;
 
-  const name = session?.user?.name || "Guest User";
+  const name = session?.user?.firstName || "Guest User";
   const email = session?.user?.email || "No email";
   const initials = name
     .split(" ")

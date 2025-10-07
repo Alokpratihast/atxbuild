@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormContext } from "react-hook-form";
-import { Paperclip, UploadCloud, X } from "lucide-react";
+import { Paperclip, UploadCloud, X, Loader2 } from "lucide-react";
 import { FormValues, FileWithProgress } from "@components/jobseeker/JobSeekerSignupForm";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -16,12 +16,9 @@ export default function Step5Files() {
     clearErrors,
   } = useFormContext<FormValues>();
 
-  const resumeFiles = watch("resume");
-  const coverFiles = watch("coverLetter");
-
-  // generate random id for each file
   const generateId = () => Math.random().toString(36).substring(2, 9);
 
+  // Upload function
   const uploadFileToServer = (fileObj: FileWithProgress, field: "resume" | "coverLetter") => {
     if (fileObj.uploadedUrl) return;
 
@@ -36,7 +33,9 @@ export default function Step5Files() {
         const progress = Math.round((event.loaded / event.total) * 100);
         setValue(
           field,
-          (watch(field) || []).map((f) => (f.id === fileObj.id ? { ...f, progress } : f)),
+          (watch(field) || []).map((f) =>
+            f.id === fileObj.id ? { ...f, progress } : f
+          ),
           { shouldValidate: true, shouldDirty: true }
         );
       }
@@ -48,7 +47,9 @@ export default function Step5Files() {
         setValue(
           field,
           (watch(field) || []).map((f) =>
-            f.id === fileObj.id ? { ...f, uploadedUrl: data.url, progress: 100 } : f
+            f.id === fileObj.id
+              ? { ...f, uploadedUrl: data.url, progress: 100 }
+              : f
           ),
           { shouldValidate: true, shouldDirty: true }
         );
@@ -57,7 +58,9 @@ export default function Step5Files() {
         setValue(
           field,
           (watch(field) || []).map((f) =>
-            f.id === fileObj.id ? { ...f, error: data.error || "Upload failed" } : f
+            f.id === fileObj.id
+              ? { ...f, error: data.error || "Upload failed" }
+              : f
           ),
           { shouldValidate: true, shouldDirty: true }
         );
@@ -68,7 +71,9 @@ export default function Step5Files() {
     xhr.onerror = () => {
       setValue(
         field,
-        (watch(field) || []).map((f) => (f.id === fileObj.id ? { ...f, error: "Upload error" } : f)),
+        (watch(field) || []).map((f) =>
+          f.id === fileObj.id ? { ...f, error: "Upload error" } : f
+        ),
         { shouldValidate: true, shouldDirty: true }
       );
       setError(field, { type: "manual", message: "Upload error" });
@@ -77,10 +82,10 @@ export default function Step5Files() {
     xhr.send(formData);
   };
 
+  // Handle file input
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: "resume" | "coverLetter") => {
     const selectedFiles = e.target.files ? Array.from(e.target.files) : [];
 
-    // check invalid files
     const invalidFiles = selectedFiles.filter((f) => {
       const ext = f.name.split(".").pop()?.toLowerCase();
       return !ext || !ALLOWED_EXTENSIONS.includes(ext) || f.size > MAX_FILE_SIZE;
@@ -99,15 +104,16 @@ export default function Step5Files() {
 
     const updatedFiles =
       field === "resume"
-        ? [filesWithProgress[0]] // only single resume
+        ? [filesWithProgress[0]]
         : [...(watch(field) || []), ...filesWithProgress];
 
     setValue(field, updatedFiles, { shouldValidate: true, shouldDirty: true });
     filesWithProgress.forEach((f) => uploadFileToServer(f, field));
   };
 
+  // Remove file
   const handleRemoveFile = (field: "resume" | "coverLetter", id: string) => {
-    const updated = (watch(field) || []).filter((f:any) => f.id !== id);
+    const updated = (watch(field) || []).filter((f: any) => f.id !== id);
     setValue(field, updated, { shouldValidate: true, shouldDirty: true });
 
     if (field === "resume" && updated.length === 0) {
@@ -118,6 +124,7 @@ export default function Step5Files() {
   return (
     <section className="p-6 bg-white shadow-lg rounded-xl max-w-lg mx-auto space-y-8">
       <h2 className="text-2xl font-bold text-gray-800 text-center mb-4">Upload Files</h2>
+
       {["resume", "coverLetter"].map((field) => {
         const files = watch(field as "resume" | "coverLetter") as FileWithProgress[] | undefined;
         const label = field === "resume" ? "Resume (required)" : "Cover Letter (optional)";
@@ -133,30 +140,54 @@ export default function Step5Files() {
               {files && files.length > 0 ? (
                 <ul className="space-y-2">
                   {files.map((f) => (
-                    <li key={f.id} className="flex justify-between items-center">
-                      <div className="flex flex-col items-start">
-                        <span className="text-green-600 break-words">{f.file.name}</span>
-                        {f.progress < 100 && (
-                          <span className="text-sm text-gray-500">{f.progress}% uploading</span>
+                    <li
+                      key={f.id}
+                      className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border"
+                    >
+                      <div className="flex flex-col items-start w-full">
+                        <div className="flex items-center gap-2">
+                          {f.progress < 100 && !f.error && (
+                            <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
+                          )}
+                          <span className="text-gray-800 font-medium break-words">
+                            {f.file?.name || "Unnamed File"}
+                          </span>
+                        </div>
+
+                        {/* Progress bar */}
+                        {f.progress < 100 && !f.error && (
+                          <div className="w-full bg-gray-200 h-2 rounded-full mt-2 overflow-hidden">
+                            <div
+                              className="bg-indigo-500 h-2 rounded-full transition-all"
+                              style={{ width: `${f.progress}%` }}
+                            ></div>
+                          </div>
                         )}
+
+                        {/* Uploaded link */}
                         {f.uploadedUrl && (
                           <a
                             href={f.uploadedUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-blue-600 text-sm underline"
+                            className="text-blue-600 text-sm underline mt-1"
                           >
                             View uploaded
                           </a>
                         )}
-                        {f.error && <span className="text-red-500 text-sm">{f.error}</span>}
+
+                        {/* Error */}
+                        {f.error && <span className="text-red-500 text-sm mt-1">{f.error}</span>}
                       </div>
+
+                      {/* Remove Button */}
                       <button
                         type="button"
                         onClick={() => handleRemoveFile(field as "resume" | "coverLetter", f.id)}
-                        className="text-red-500 hover:text-red-700 ml-2"
+                        className="px-3 py-2 bg-red-500 text-white rounded-md text-sm font-medium hover:bg-red-600 transition flex items-center gap-1 ml-2"
                       >
-                        <X size={16} />
+                        <X size={14} />
+                        Remove
                       </button>
                     </li>
                   ))}
@@ -167,6 +198,7 @@ export default function Step5Files() {
                   <p className="text-gray-600">Click or drag your file here</p>
                 </>
               )}
+
               <input
                 type="file"
                 accept=".pdf,.doc,.docx"

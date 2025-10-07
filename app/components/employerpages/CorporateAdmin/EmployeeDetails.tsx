@@ -5,9 +5,10 @@ import { toast } from "react-hot-toast";
 interface Employee {
   _id?: string;
   name: string;
-  dob: string;
+ 
   title: string;
-  doj: string;
+  doj?: string;
+  notOnBond?: boolean;
   email?: string;
   phone?: string;
   department?: string;
@@ -16,7 +17,7 @@ interface Employee {
 export default function EmployeeDetailsView() {
   const [employees, setEmployees] = useState<Employee[]>([]);
 
-  // ✅ Fetch Employees
+  // Fetch Employees
   const fetchEmployees = async () => {
     try {
       const res = await fetch("/api/corporatepage/employees");
@@ -36,31 +37,56 @@ export default function EmployeeDetailsView() {
   }, []);
 
   return (
-    <div className="p-6 bg-white rounded shadow space-y-4">
+    <div className="p-6 bg-white rounded shadow space-y-6">
       <h2 className="text-2xl font-bold">Employee Details</h2>
 
-      {/* Employee List */}
       {employees.length === 0 ? (
         <p className="text-gray-500">No employees found</p>
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-4">
           {employees.map((emp) => (
-            <li
-              key={emp._id}
-              className="border p-3 rounded flex flex-col gap-1"
-            >
-              <p className="font-medium">{emp.name} — {emp.title}</p>
-              <p className="text-sm text-gray-500">
-                <strong>DOB:</strong> {emp.dob} | <strong>DOJ:</strong> {emp.doj}
-              </p>
+            <li key={emp._id} className="border p-4 rounded flex flex-col gap-3 bg-gray-50">
+              {/* Name & Title */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Employee Name</label>
+                <p className="text-gray-800">{emp.name}</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Job Title</label>
+                <p className="text-gray-800">{emp.title}</p>
+              </div>
+
+              {/* DOJ */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Date of Joining (DOJ)</label>
+                <p className="text-gray-800">
+                  {emp.notOnBond ? "Not on bond" : emp.doj || "N/A"}
+                </p>
+              </div>
+
+              {/* Department */}
               {emp.department && (
-                <p className="text-sm text-gray-500"><strong>Department:</strong> {emp.department}</p>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Department</label>
+                  <p className="text-gray-800">{emp.department}</p>
+                </div>
               )}
+
+              {/* Email */}
               {emp.email && (
-                <p className="text-sm text-gray-500"><strong>Email:</strong> {emp.email}</p>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Email</label>
+                  <p className="text-gray-800">{emp.email}</p>
+                </div>
               )}
+
+              {/* Phone */}
               {emp.phone && (
-                <p className="text-sm text-gray-500"><strong>Phone:</strong> {emp.phone}</p>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Phone</label>
+                  <p className="text-gray-800">{emp.phone}</p>
+                </div>
               )}
             </li>
           ))}

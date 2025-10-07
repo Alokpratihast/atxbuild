@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormContext, useFieldArray, FieldError } from "react-hook-form";
+import { AiOutlinePlus, AiOutlineDelete } from "react-icons/ai";
 
 // Type for a single skill
 interface Skill {
@@ -28,14 +29,14 @@ export default function Step3Skills() {
   };
 
   return (
-    <section className="p-6 bg-white shadow-md rounded-xl max-w-2xl mx-auto space-y-6">
+    <section className="p-6 bg-gradient-to-br from-gray-50 to-white shadow-lg rounded-2xl max-w-3xl mx-auto space-y-6 border border-gray-200">
       <h2 className="text-2xl font-semibold text-gray-900">Skills</h2>
 
       <div className="space-y-4">
         {fields.map((field, index) => (
           <div
             key={field.id}
-            className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start border rounded-lg p-4 bg-gray-50"
+            className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center border rounded-xl p-4 bg-white shadow hover:shadow-md transition"
           >
             {/* Skill Name */}
             <div className="md:col-span-2">
@@ -45,9 +46,9 @@ export default function Step3Skills() {
                 {...register(`skills.${index}.name` as const, {
                   required: "Skill Name is required",
                 })}
-                className={`mt-1 block w-full rounded-md border ${
+                className={`mt-1 block w-full rounded-lg border px-3 py-2 ${
                   getSkillError(index, "name") ? "border-red-500" : "border-gray-300"
-                } shadow-sm focus:border-indigo-500 focus:ring-indigo-500`}
+                } focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition`}
                 placeholder="e.g., React, Node.js, Python"
               />
               <p className="text-red-500 text-sm">{getSkillError(index, "name")}</p>
@@ -63,27 +64,22 @@ export default function Step3Skills() {
                 {...register(`skills.${index}.rating` as const, {
                   required: "Rating is required",
                 })}
-                className={`mt-1 block w-full rounded-md border ${
+                className={`mt-1 block w-full rounded-lg border px-3 py-2 ${
                   getSkillError(index, "rating") ? "border-red-500" : "border-gray-300"
-                } shadow-sm focus:border-indigo-500 focus:ring-indigo-500`}
+                } focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition`}
                 placeholder="5"
               />
               <p className="text-red-500 text-sm">{getSkillError(index, "rating")}</p>
             </div>
 
             {/* Remove Button */}
-            <div className="flex items-end">
+             <div className="md:col-span-1 flex justify-center items-end">
               <button
                 type="button"
                 onClick={() => remove(index)}
-                disabled={fields.length === 1} // Prevent removing last skill
-                className={`px-3 py-2 rounded-md text-white ${
-                  fields.length === 1
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-red-500 hover:bg-red-600"
-                }`}
+                className="p-2 rounded-full bg-red-500 hover:bg-red-600 text-white transition-all shadow-md"
               >
-                Remove
+                <AiOutlineDelete size={20} />
               </button>
             </div>
           </div>
@@ -91,13 +87,14 @@ export default function Step3Skills() {
       </div>
 
       {/* Add Skill Button */}
-      <div className="flex justify-end">
+      <div className="flex justify-center md:justify-end">
         <button
           type="button"
           onClick={() => append({ name: "", rating: 1 })}
-          className="px-5 py-2 bg-indigo-600 text-white font-medium rounded-lg shadow hover:bg-indigo-700 transition"
+          className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white font-medium rounded-lg shadow hover:bg-indigo-700 transition"
         >
-          + Add Skill
+          <AiOutlinePlus size={18} />
+          Add Skill
         </button>
       </div>
     </section>

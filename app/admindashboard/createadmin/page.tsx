@@ -1,4 +1,4 @@
-import CreateAdminForm from "@/components/Admin/multipleadmincreationform/adminform";
+import CreateAdminForm from "@/components/Admin/multipleadmincreationform/admindashboard";
 
 export default function SuperAdminDashboard() {
   return (

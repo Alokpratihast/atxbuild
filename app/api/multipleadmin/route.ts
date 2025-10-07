@@ -12,15 +12,25 @@ export async function POST(req: NextRequest) {
   try {
     await connectedToDatabase();
     const session = await getServerSession(authOptions);
+    
 
     // Only superadmin can create admins
     if (!session || session.user.role !== "superadmin") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    const { name, email, password } = await req.json();
+    const { name, email, password, phone } = await req.json();
+    console.log("Creating admin with phone:", phone);
 
-    if (!name || !email || !password) {
+    // ✅ Validate email domain
+if (!email.endsWith("@atxtechnologies.com")) {
+  return NextResponse.json(
+    { error: "Email must be @atxtechnologies.com" },
+    { status: 400 }
+  );
+}
+
+    if (!name || !email || !password ) {
       return NextResponse.json({ error: "All fields are required" }, { status: 400 });
     }
 
@@ -35,6 +45,7 @@ export async function POST(req: NextRequest) {
       name,
       email,
       password: hashedPassword,
+      phone: phone?.trim() || "",
       role: "admin",
     });
 
@@ -44,9 +55,12 @@ export async function POST(req: NextRequest) {
 
   } catch (err) {
     console.error("Admin creation error:", err);
+    
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
+  
 }
+
 
 export async function GET(req: NextRequest) {
   try {

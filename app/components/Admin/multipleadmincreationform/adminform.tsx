@@ -1,16 +1,31 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
-// CreateAdminForm Component
-function CreateAdminForm({ onSuccess }: { onSuccess: () => void }) {
-  const [formData, setFormData] = useState({ name: "", email: "", password: "" });
+interface CreateAdminFormProps {
+  onSuccess?: () => void;
+}
+
+export default function CreateAdminForm({ onSuccess }: CreateAdminFormProps) {
+  const [formData, setFormData] = useState({
+    name: "",
+    emailPrefix: "",
+    password: "",
+    phone: "",
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const DOMAIN = "@atxtechnologies.com";
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (name === "emailPrefix") {
+      setFormData({ ...formData, emailPrefix: value.replace(DOMAIN, "") });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -19,7 +34,9 @@ function CreateAdminForm({ onSuccess }: { onSuccess: () => void }) {
     setError(null);
     setSuccess(null);
 
-    if (!formData.name || !formData.email || !formData.password) {
+    const email = formData.emailPrefix + DOMAIN;
+
+    if (!formData.name || !formData.emailPrefix || !formData.password) {
       setError("All fields are required");
       setLoading(false);
       return;
@@ -29,7 +46,7 @@ function CreateAdminForm({ onSuccess }: { onSuccess: () => void }) {
       const res = await fetch("/api/multipleadmin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, email }),
       });
 
       const data = await res.json();
@@ -38,8 +55,8 @@ function CreateAdminForm({ onSuccess }: { onSuccess: () => void }) {
         setError(data.error || "Failed to create admin");
       } else {
         setSuccess("Admin created successfully!");
-        setFormData({ name: "", email: "", password: "" });
-        onSuccess(); // refresh admin list
+        setFormData({ name: "", emailPrefix: "", password: "", phone: "" });
+        onSuccess?.(); // refresh admin list if callback exists
       }
     } catch {
       setError("Something went wrong");
@@ -50,7 +67,9 @@ function CreateAdminForm({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <div className="bg-white shadow-lg rounded-xl p-6 mb-8 w-full max-w-lg mx-auto">
-      <h2 className="text-2xl font-semibold mb-4 text-gray-800 text-center">Create Admin</h2>
+      <h2 className="text-2xl font-semibold mb-4 text-gray-800 text-center">
+        Create Admin
+      </h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
           type="text"
@@ -60,19 +79,30 @@ function CreateAdminForm({ onSuccess }: { onSuccess: () => void }) {
           onChange={handleChange}
           className="w-full border border-gray-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
-        <input
-          type="email"
-          name="email"
-          placeholder="Email"
-          value={formData.email}
-          onChange={handleChange}
-          className="w-full border border-gray-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+        <div className="relative">
+          <input
+            type="text"
+            name="emailPrefix"
+            placeholder="Email prefix"
+            value={formData.emailPrefix}
+            onChange={handleChange}
+            className="w-full border border-gray-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-48"
+          />
+          <span className="absolute right-3 top-3 text-gray-500">{DOMAIN}</span>
+        </div>
         <input
           type="password"
           name="password"
           placeholder="Password"
           value={formData.password}
+          onChange={handleChange}
+          className="w-full border border-gray-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <input
+          type="telephone"
+          name="phone"
+          placeholder="Phone"
+          value={formData.phone}
           onChange={handleChange}
           className="w-full border border-gray-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
@@ -88,74 +118,6 @@ function CreateAdminForm({ onSuccess }: { onSuccess: () => void }) {
           {loading ? "Creating..." : "Create Admin"}
         </button>
       </form>
-    </div>
-  );
-}
-
-// AdminDashboard Component
-export default function AdminDashboard() {
-  const [admins, setAdmins] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const fetchAdmins = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/multipleadmin");
-      const data = await res.json();
-      if (res.ok) setAdmins(data.admins || []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this admin?")) return;
-    try {
-      const res = await fetch(`/api/multipleadmin?id=${id}`, { method: "DELETE" });
-      if (res.ok) fetchAdmins();
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  useEffect(() => {
-    fetchAdmins();
-  }, []);
-
-  return (
-    <div className="p-6 max-w-5xl mx-auto">
-      {/* Create Admin Form */}
-      <CreateAdminForm onSuccess={fetchAdmins} />
-
-      {/* Admin List */}
-      <div className="bg-white shadow-lg rounded-xl p-6">
-        <h2 className="text-2xl font-semibold mb-6 text-gray-800 text-center">Admin List</h2>
-
-        {loading ? (
-          <p className="text-center text-gray-500">Loading admins...</p>
-        ) : admins.length === 0 ? (
-          <p className="text-center text-gray-500">No admins created yet.</p>
-        ) : (
-          <ul className="divide-y divide-gray-200">
-            {admins.map((admin) => (
-              <li key={admin._id} className="flex justify-between items-center py-3 px-4 hover:bg-gray-50 rounded-md transition">
-                <div>
-                  <p className="font-medium text-gray-800">{admin.name}</p>
-                  <p className="text-gray-500 text-sm">{admin.email}</p>
-                </div>
-                <button
-                  className="text-red-600 font-medium hover:text-red-800 transition"
-                  onClick={() => handleDelete(admin._id)}
-                >
-                  Delete
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
     </div>
   );
 }

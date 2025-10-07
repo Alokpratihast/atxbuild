@@ -80,10 +80,10 @@ export default function Step2Professional() {
         />
 
         <InputField
-          label="Notice Period (Months)"
+          label="Notice Period (days)"
           type="number"
           min={0}
-          placeholder="Enter your notice period in months"
+          placeholder="Enter your notice period in days"
           error={getErrorMessage(errors.noticePeriod)}
           registerProps={register("noticePeriod", { required: "Notice Period is required" })}
         />

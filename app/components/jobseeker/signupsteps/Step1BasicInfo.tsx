@@ -2,9 +2,6 @@
 
 import { useFormContext, FieldError, FieldErrors, Merge } from "react-hook-form";
 
-
-
-
 /**
  * Helper function to safely get the error message from react-hook-form's errors object.
  */
@@ -16,13 +13,22 @@ const getErrorMessage = (error?: FieldError | Merge<FieldError, FieldErrors<any>
 
 /**
  * Step1BasicInfo Component
- 
  */
 export default function Step1BasicInfo() {
   const {
     register,
     formState: { errors },
   } = useFormContext();
+
+  // Calculate max DOB allowed (today minus 18 years)
+  const today = new Date();
+  const maxDob = new Date(
+    today.getFullYear() - 18,
+    today.getMonth(),
+    today.getDate()
+  )
+    .toISOString()
+    .split("T")[0]; // YYYY-MM-DD
 
   return (
     <section className="p-8 bg-gradient-to-br from-gray-50 to-white shadow-lg rounded-2xl max-w-2xl mx-auto space-y-6 border border-gray-200">
@@ -107,7 +113,24 @@ export default function Step1BasicInfo() {
           type="date"
           placeholder="Select your date of birth"
           error={getErrorMessage(errors.dob)}
-          registerProps={register("dob", { required: "Date of Birth is required" })}
+          registerProps={register("dob", {
+            required: "Date of Birth is required",
+            validate: (value) => {
+              if (!value) return "Date of Birth is required";
+
+              const dob = new Date(value);
+              let age = today.getFullYear() - dob.getFullYear();
+              const monthDiff = today.getMonth() - dob.getMonth();
+              const dayDiff = today.getDate() - dob.getDate();
+
+              if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+                age--;
+              }
+
+              return age >= 18 || "You must be at least 18 years old";
+            },
+          })}
+          max={maxDob} // Only allow DOB 18+ years ago
         />
       </div>
     </section>
@@ -116,7 +139,6 @@ export default function Step1BasicInfo() {
 
 /**
  * InputField Component
- * Reusable input field with label, error handling, and Tailwind styling.
  */
 interface InputFieldProps {
   label: string;
@@ -124,17 +146,19 @@ interface InputFieldProps {
   placeholder?: string;
   error?: string;
   registerProps: any;
-  inputMode?: "text" | "numeric" | "decimal" | "tel" | "email" | "url"; // <-- add inputMode
-  onInput?: (e: React.FormEvent<HTMLInputElement>) => void; 
+  inputMode?: "text" | "numeric" | "decimal" | "tel" | "email" | "url";
+  onInput?: (e: React.FormEvent<HTMLInputElement>) => void;
+  max?: string; // For date max
 }
 
-const InputField = ({ label, type = "text", placeholder, error, registerProps }: InputFieldProps) => (
+const InputField = ({ label, type = "text", placeholder, error, registerProps, max }: InputFieldProps) => (
   <div className="space-y-1">
     <label className="block text-sm font-medium text-gray-700">{label}</label>
     <input
       type={type}
       {...registerProps}
       placeholder={placeholder}
+      max={max}
       className={`w-full px-4 py-2 rounded-lg border ${error ? "border-red-500" : "border-gray-300"
         } focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition`}
     />
