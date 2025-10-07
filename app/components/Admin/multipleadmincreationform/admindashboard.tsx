@@ -10,7 +10,7 @@ export default function AdminDashboard() {
   const fetchAdmins = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/multipleadmin");
+      const res = await fetch("/api/multipleemploy",{cache:"no-store"});
       const data = await res.json();
       if (res.ok) setAdmins(data.admins || []);
     } catch (err) {
@@ -21,9 +21,9 @@ export default function AdminDashboard() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this admin?")) return;
+    if (!confirm("Are you sure you want to delete this employee?")) return;
     try {
-      const res = await fetch(`/api/multipleadmin?id=${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/multipleemploy?id=${id}`, { method: "DELETE" });
       if (res.ok) fetchAdmins();
     } catch (err) {
       console.error(err);
@@ -31,7 +31,7 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    fetchAdmins();
+    fetchAdmins();  
   }, []);
 
   return (
@@ -41,12 +41,12 @@ export default function AdminDashboard() {
 
       {/* Admin List */}
       <div className="bg-white shadow-lg rounded-xl p-6">
-        <h2 className="text-2xl font-semibold mb-6 text-gray-800 text-center">Admin List</h2>
+        <h2 className="text-2xl font-semibold mb-6 text-gray-800 text-center">Employer List</h2>
 
         {loading ? (
-          <p className="text-center text-gray-500">Loading admins...</p>
+          <p className="text-center text-gray-500">Loading employees...</p>
         ) : admins.length === 0 ? (
-          <p className="text-center text-gray-500">No admins created yet.</p>
+          <p className="text-center text-gray-500">No employees created yet.</p>
         ) : (
           <ul className="divide-y divide-gray-200">
             {admins.map((admin) => (

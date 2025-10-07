@@ -43,7 +43,7 @@ export default function CreateAdminForm({ onSuccess }: CreateAdminFormProps) {
     }
 
     try {
-      const res = await fetch("/api/multipleadmin", {
+      const res = await fetch("/api/multipleemploy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...formData, email }),
@@ -52,9 +52,9 @@ export default function CreateAdminForm({ onSuccess }: CreateAdminFormProps) {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Failed to create admin");
+        setError(data.error || "Failed to create Employee");
       } else {
-        setSuccess("Admin created successfully!");
+        setSuccess("Employee created successfully!");
         setFormData({ name: "", emailPrefix: "", password: "", phone: "" });
         onSuccess?.(); // refresh admin list if callback exists
       }
@@ -68,7 +68,7 @@ export default function CreateAdminForm({ onSuccess }: CreateAdminFormProps) {
   return (
     <div className="bg-white shadow-lg rounded-xl p-6 mb-8 w-full max-w-lg mx-auto">
       <h2 className="text-2xl font-semibold mb-4 text-gray-800 text-center">
-        Create Admin
+        Create Employees Account
       </h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
@@ -115,7 +115,7 @@ export default function CreateAdminForm({ onSuccess }: CreateAdminFormProps) {
           disabled={loading}
           className="w-full py-3 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition-colors"
         >
-          {loading ? "Creating..." : "Create Admin"}
+          {loading ? "Creating..." : "Create employee"}
         </button>
       </form>
     </div>

@@ -1,4 +1,4 @@
-// app/api/multipleadmin/route.ts
+// app/api/multipleemploy/route.ts
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";

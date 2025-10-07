@@ -1,7 +1,8 @@
 "use client";
 
 import { useFormContext } from "react-hook-form";
-import { Paperclip, UploadCloud, X, Loader2 } from "lucide-react";
+import { Paperclip, UploadCloud, Loader2 } from "lucide-react";
+import { AiOutlineDelete } from "react-icons/ai";
 import { FormValues, FileWithProgress } from "@components/jobseeker/JobSeekerSignupForm";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -18,7 +19,6 @@ export default function Step5Files() {
 
   const generateId = () => Math.random().toString(36).substring(2, 9);
 
-  // Upload function
   const uploadFileToServer = (fileObj: FileWithProgress, field: "resume" | "coverLetter") => {
     if (fileObj.uploadedUrl) return;
 
@@ -59,7 +59,7 @@ export default function Step5Files() {
           field,
           (watch(field) || []).map((f) =>
             f.id === fileObj.id
-              ? { ...f, error: data.error || "Upload failed" }
+              ? { ...f, error: data.error || "Upload failed", progress: 0 }
               : f
           ),
           { shouldValidate: true, shouldDirty: true }
@@ -72,7 +72,7 @@ export default function Step5Files() {
       setValue(
         field,
         (watch(field) || []).map((f) =>
-          f.id === fileObj.id ? { ...f, error: "Upload error" } : f
+          f.id === fileObj.id ? { ...f, error: "Upload error", progress: 0 } : f
         ),
         { shouldValidate: true, shouldDirty: true }
       );
@@ -82,7 +82,6 @@ export default function Step5Files() {
     xhr.send(formData);
   };
 
-  // Handle file input
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: "resume" | "coverLetter") => {
     const selectedFiles = e.target.files ? Array.from(e.target.files) : [];
 
@@ -100,18 +99,19 @@ export default function Step5Files() {
       id: generateId(),
       file: f,
       progress: 0,
+      error: undefined,
+      uploadedUrl: undefined,
     }));
 
     const updatedFiles =
       field === "resume"
-        ? [filesWithProgress[0]]
-        : [...(watch(field) || []), ...filesWithProgress];
+        ? [filesWithProgress[0]] // only 1 resume
+        : [...(watch(field) || []), ...filesWithProgress]; // multiple cover letters
 
     setValue(field, updatedFiles, { shouldValidate: true, shouldDirty: true });
     filesWithProgress.forEach((f) => uploadFileToServer(f, field));
   };
 
-  // Remove file
   const handleRemoveFile = (field: "resume" | "coverLetter", id: string) => {
     const updated = (watch(field) || []).filter((f: any) => f.id !== id);
     setValue(field, updated, { shouldValidate: true, shouldDirty: true });
@@ -139,58 +139,57 @@ export default function Step5Files() {
             <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-indigo-500 hover:bg-indigo-50 transition">
               {files && files.length > 0 ? (
                 <ul className="space-y-2">
-                  {files.map((f) => (
-                    <li
-                      key={f.id}
-                      className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border"
-                    >
-                      <div className="flex flex-col items-start w-full">
-                        <div className="flex items-center gap-2">
-                          {f.progress < 100 && !f.error && (
-                            <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
+                  {files.map((f) =>
+                    f ? (
+                      <li
+                        key={f.id}
+                        className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border"
+                      >
+                        <div className="flex flex-col items-start w-full">
+                          <div className="flex items-center gap-2">
+                            {(f.progress ?? 0) < 100 && !f.error && (
+                              <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
+                            )}
+                            <span className="text-gray-800 font-medium break-words">
+                              {f.file?.name || "Unnamed File"}
+                            </span>
+                          </div>
+
+                          {(f.progress ?? 0) < 100 && !f.error && (
+                            <div className="w-full bg-gray-200 h-2 rounded-full mt-2 overflow-hidden">
+                              <div
+                                className="bg-indigo-500 h-2 rounded-full transition-all"
+                                style={{ width: `${f.progress ?? 0}%` }}
+                              ></div>
+                            </div>
                           )}
-                          <span className="text-gray-800 font-medium break-words">
-                            {f.file?.name || "Unnamed File"}
-                          </span>
+
+                          {f.uploadedUrl && (
+                            <a
+                              href={f.uploadedUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-blue-600 text-sm underline mt-1"
+                            >
+                              View uploaded
+                            </a>
+                          )}
+
+                          {f.error && <span className="text-red-500 text-sm mt-1">{f.error}</span>}
                         </div>
 
-                        {/* Progress bar */}
-                        {f.progress < 100 && !f.error && (
-                          <div className="w-full bg-gray-200 h-2 rounded-full mt-2 overflow-hidden">
-                            <div
-                              className="bg-indigo-500 h-2 rounded-full transition-all"
-                              style={{ width: `${f.progress}%` }}
-                            ></div>
-                          </div>
-                        )}
-
-                        {/* Uploaded link */}
-                        {f.uploadedUrl && (
-                          <a
-                            href={f.uploadedUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-blue-600 text-sm underline mt-1"
+                        <div className="flex justify-center items-end ml-2">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveFile(field as "resume" | "coverLetter", f.id)}
+                            className="p-2 rounded-full bg-red-500 hover:bg-red-600 text-white transition-all shadow-md"
                           >
-                            View uploaded
-                          </a>
-                        )}
-
-                        {/* Error */}
-                        {f.error && <span className="text-red-500 text-sm mt-1">{f.error}</span>}
-                      </div>
-
-                      {/* Remove Button */}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveFile(field as "resume" | "coverLetter", f.id)}
-                        className="px-3 py-2 bg-red-500 text-white rounded-md text-sm font-medium hover:bg-red-600 transition flex items-center gap-1 ml-2"
-                      >
-                        <X size={14} />
-                        Remove
-                      </button>
-                    </li>
-                  ))}
+                            <AiOutlineDelete size={20} />
+                          </button>
+                        </div>
+                      </li>
+                    ) : null
+                  )}
                 </ul>
               ) : (
                 <>
@@ -209,7 +208,9 @@ export default function Step5Files() {
             </div>
 
             {errors[field as "resume" | "coverLetter"] && (
-              <p className="text-red-500 text-sm">{errors[field as "resume" | "coverLetter"]?.message}</p>
+              <p className="text-red-500 text-sm">
+                {errors[field as "resume" | "coverLetter"]?.message}
+              </p>
             )}
           </div>
         );

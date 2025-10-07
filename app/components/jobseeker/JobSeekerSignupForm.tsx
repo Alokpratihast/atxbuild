@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useForm, FormProvider, SubmitHandler } from "react-hook-form";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -44,6 +44,7 @@ export type FormValues = {
 export default function JobSeekerMultiStepForm() {
   const [step, setStep] = useState(0);
   const [mode, setMode] = useState<"register" | "login">("register");
+  const [validating, setValidating] = useState(false);
   const router = useRouter();
   const { data: session } = useSession();
 
@@ -58,21 +59,56 @@ export default function JobSeekerMultiStepForm() {
     mode: "onBlur",
   });
 
+  const steps = [
+    <Step1BasicInfo key={0} />,
+    <Step2Professional key={1} />,
+    <Step3Skills key={2} />,
+    <Step4Experience key={3} />,
+    <Step5Files key={4} />,
+  ];
+
+  // ✅ Improved Next Button Logic
+  const handleNext = async () => {
+    if (validating) return; // prevent double clicks
+    setValidating(true);
+
+    try {
+      const isValid =
+        step === 4 ? await methods.trigger("resume") : await methods.trigger();
+
+      if (isValid) {
+        setStep((prev) => Math.min(prev + 1, steps.length - 1));
+      }
+    } finally {
+      // add small timeout to avoid skipping on double-click
+      setTimeout(() => setValidating(false), 400);
+    }
+  };
+
+  // Safe Previous
+  const handlePrevious = () => {
+    if (validating) return;
+    setStep((prev) => Math.max(prev - 1, 0));
+  };
+
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     try {
       const resumeUrl = data.resume?.[0]?.uploadedUrl || "";
-      const coverLetterUrls = data.coverLetter?.map((f) => f.uploadedUrl).filter(Boolean) || [];
+      const coverLetterUrls =
+        data.coverLetter?.map((f) => f.uploadedUrl).filter(Boolean) || [];
 
       if (!resumeUrl) {
         alert("Please upload your resume before submitting.");
         return;
       }
 
-      const payload = { ...data, resume: resumeUrl, coverLetter: coverLetterUrls.length ? coverLetterUrls : undefined };
-
+      const payload = {
+        ...data,
+        resume: resumeUrl,
+        coverLetter: coverLetterUrls.length ? coverLetterUrls : undefined,
+      };
 
       if (session?.user?.id) {
-        // Update existing profile
         const res = await fetch(`/api/jobseekerprofile/${session.user.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -86,7 +122,6 @@ export default function JobSeekerMultiStepForm() {
           alert(result.error || "Failed to update profile.");
         }
       } else {
-        // New registration
         const res = await fetch("/api/jobseekers", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -107,14 +142,6 @@ export default function JobSeekerMultiStepForm() {
       alert("Something went wrong. Please try again.");
     }
   };
-
-  const steps = [
-    <Step1BasicInfo key={0} />,
-    <Step2Professional key={1} />,
-    <Step3Skills key={2} />,
-    <Step4Experience key={3} />,
-    <Step5Files key={4} />,
-  ];
 
   return (
     <FormProvider {...methods}>
@@ -199,8 +226,9 @@ export default function JobSeekerMultiStepForm() {
                 {step > 0 ? (
                   <button
                     type="button"
-                    onClick={() => setStep(step - 1)}
-                    className="px-5 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200"
+                    onClick={handlePrevious}
+                    disabled={validating}
+                    className="px-5 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     ← Previous
                   </button>
@@ -211,16 +239,22 @@ export default function JobSeekerMultiStepForm() {
                 {step < steps.length - 1 ? (
                   <button
                     type="button"
-                    onClick={async () => {
-                      const isValid =
-                        step === 4
-                          ? await methods.trigger("resume")
-                          : await methods.trigger();
-                      if (isValid) setStep(step + 1);
-                    }}
-                    className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                    onClick={handleNext}
+                    disabled={validating}
+                    className={`px-6 py-2 rounded-lg text-white flex items-center gap-2 ${
+                      validating
+                        ? "bg-indigo-400 cursor-not-allowed"
+                        : "bg-indigo-600 hover:bg-indigo-700"
+                    }`}
                   >
-                    Next →
+                    {validating ? (
+                      <>
+                        <span className="animate-spin border-2 border-white border-t-transparent rounded-full w-4 h-4"></span>
+                        <span>Next...</span>
+                      </>
+                    ) : (
+                      <>Next →</>
+                    )}
                   </button>
                 ) : (
                   <button
@@ -256,7 +290,8 @@ export default function JobSeekerMultiStepForm() {
                     email,
                     password,
                   });
-                  if (res?.error) return alert(res.error || "Invalid credentials");
+                  if (res?.error)
+                    return alert(res.error || "Invalid credentials");
                   const session = await getSession();
                   if (session?.user?.id)
                     localStorage.setItem("jobSeekerId", session.user.id);

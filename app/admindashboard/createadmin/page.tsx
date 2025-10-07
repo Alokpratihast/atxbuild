@@ -6,7 +6,7 @@ export default function SuperAdminDashboard() {
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <h1 className="text-3xl sm:text-4xl font-bold mb-8 text-gray-800">
-          Superadmin Dashboard
+          SuperadminDashboard
         </h1>
 
         {/* Create Admin Form */}
