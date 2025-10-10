@@ -1,9 +1,9 @@
-import EmployerDashboardPage from "@/components/employerpages/uploaddocuments/employerdashboard"; 
+import JobProviderApplication from "@/components/employerpages/uploaddocuments/jobproviderapplication"; 
 
 export default function EmployerDashboard() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <EmployerDashboardPage />
+      <JobProviderApplication />
     </div>
   );
 }

@@ -24,10 +24,16 @@ export default function EmployerSidebar() {
       href: "/employerdashboard/uploaddocs",
     },
     {
-      id: "Corporatepage",
-      label: "🏢 Corporate Panel",
-      href: "/employerdashboard/corporatepage",
+      id: "applicationstatus",
+      label: "📄 Application Status",
+      href: "/employerdashboard/applicationstatus",
     },
+    {
+      id: "Postjob",
+      label: "📝 Post a Job",
+      href: "/employerdashboard/jobpost",
+    }
+
   ];
 
   const handleLogout = async () => {

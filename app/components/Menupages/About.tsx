@@ -121,9 +121,9 @@ export default function AboutPage() {
             {[
               { img: "/abhaysir2.png", name: "Abhay Singh", role: " IT head & Solution architect & Delivery ", bio: "Drives IT strategy and secure operations, architects scalable solutions, and ensures successful, on-time project delivery." },
               { img: "/sankalp.jpg", name: "Sankalp Shinde", role: "Applications software engineer", bio: "Specialist in cross-platform app development." },
-              { img: "/anant office.jpg", name: "Anant Sharma", role: "Associate software engineer", bio: "Expert in mobile and app building solutions" },
+              { img: "/anant office.jpg", name: "Anant palia", role: "Associate software engineer", bio: "Expert in mobile and app building solutions" },
               { img: "/jaydeep.jpg", name: "Jaydeep Sharma", role: "Quality analyst", bio: "Creative leader shaping engaging user experiences." },
-              { img: "/vankates2.jpg", name: "Vankatesh kurapti", role: "Marketing Associate", bio: " Recruitment, Operations & Marketing" },
+              { img: "/vankates2.jpg", name: "Vankatesh kurapati", role: "Marketing Associate", bio: " Recruitment, Operations & Marketing" },
               { img: "/nalni.jpg", name: "Seera nalini", role: "Digital marketing executive", bio: "Drives brand growth through SEO, social media, and online marketing strategies." },
               { img: "/Alok.jpg", name: "Alok pratihast", role: "Full stack Intern", bio: "Full Stack Developer passionate about building scalable, user-friendly, and efficient web applications from front to back." },
               {img:"/kalpana.jpg",name:"Kalpana gaur",role:"Digital marketing executive",bio:"Drives brand growth through SEO, social media, and online marketing strategies."}

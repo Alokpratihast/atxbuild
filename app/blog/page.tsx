@@ -1,6 +1,7 @@
-import Blog from "@/components/Menupages/Bloggg"
+
+import Bloggg from "@/components/Menupages/Bloggg"
 
 
-export default function careerpage(){
-    return <Blog/>
+export default function Blogpage(){
+    return <Bloggg/>
 }
