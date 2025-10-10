@@ -69,8 +69,8 @@ export async function POST(req: NextRequest) {
       noticePeriod,
       skills,
       experience,
-      resume: resume || "",
-      coverLetter: coverLetter || "",
+      resume:  Array.isArray(resume) ? resume[0] : resume || "",
+      coverLetter:Array.isArray(coverLetter) ? coverLetter[0] : coverLetter || "",
     });
 
     return NextResponse.json({

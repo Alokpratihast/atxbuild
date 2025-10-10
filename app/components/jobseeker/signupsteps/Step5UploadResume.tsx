@@ -1,3 +1,5 @@
+
+
 "use client";
 
 import { useFormContext } from "react-hook-form";
@@ -17,10 +19,12 @@ export default function Step5Files() {
     clearErrors,
   } = useFormContext<FormValues>();
 
+  // Generate a random ID for each file
   const generateId = () => Math.random().toString(36).substring(2, 9);
 
+  // Upload a file to the server
   const uploadFileToServer = (fileObj: FileWithProgress, field: "resume" | "coverLetter") => {
-    if (fileObj.uploadedUrl) return;
+    if (fileObj.uploadedUrl) return; // already uploaded
 
     const formData = new FormData();
     formData.append("file", fileObj.file);
@@ -28,6 +32,7 @@ export default function Step5Files() {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/uploadresume");
 
+    // Track upload progress
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable) {
         const progress = Math.round((event.loaded / event.total) * 100);
@@ -41,6 +46,7 @@ export default function Step5Files() {
       }
     };
 
+    // On successful upload
     xhr.onload = () => {
       const data = JSON.parse(xhr.responseText);
       if (xhr.status === 200 && data.url) {
@@ -53,7 +59,7 @@ export default function Step5Files() {
           ),
           { shouldValidate: true, shouldDirty: true }
         );
-        clearErrors(field);
+        clearErrors(field); // clear errors if any
       } else {
         setValue(
           field,
@@ -68,6 +74,7 @@ export default function Step5Files() {
       }
     };
 
+    // On upload error
     xhr.onerror = () => {
       setValue(
         field,
@@ -82,14 +89,15 @@ export default function Step5Files() {
     xhr.send(formData);
   };
 
+  // Handle file selection (for both resume and cover letter)
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: "resume" | "coverLetter") => {
     const selectedFiles = e.target.files ? Array.from(e.target.files) : [];
 
+    // Validate file type and size
     const invalidFiles = selectedFiles.filter((f) => {
       const ext = f.name.split(".").pop()?.toLowerCase();
       return !ext || !ALLOWED_EXTENSIONS.includes(ext) || f.size > MAX_FILE_SIZE;
     });
-
     if (invalidFiles.length > 0) {
       alert("Invalid file type or size. Only PDF/DOC/DOCX under 5MB allowed.");
       return;
@@ -103,21 +111,28 @@ export default function Step5Files() {
       uploadedUrl: undefined,
     }));
 
-    const updatedFiles =
-      field === "resume"
-        ? [filesWithProgress[0]] // only 1 resume
-        : [...(watch(field) || []), ...filesWithProgress]; // multiple cover letters
+    // Resume = single file, Cover letter = multiple files
+    const isSingle = field === "resume";
+    const updatedFiles = isSingle
+      ? [filesWithProgress[0]]
+      : [...(watch(field) || []), ...filesWithProgress];
 
     setValue(field, updatedFiles, { shouldValidate: true, shouldDirty: true });
+
+    // Upload each file
     filesWithProgress.forEach((f) => uploadFileToServer(f, field));
   };
 
+  // Handle removing a file
   const handleRemoveFile = (field: "resume" | "coverLetter", id: string) => {
-    const updated = (watch(field) || []).filter((f: any) => f.id !== id);
+    const updated = (watch(field) || []).filter((f) => f.id !== id);
     setValue(field, updated, { shouldValidate: true, shouldDirty: true });
 
+    // Only resume is required
     if (field === "resume" && updated.length === 0) {
       setError(field, { type: "manual", message: "Please upload your resume" });
+    } else if (field === "coverLetter" && updated.length === 0) {
+      clearErrors(field); // optional, no error
     }
   };
 
@@ -131,11 +146,13 @@ export default function Step5Files() {
 
         return (
           <div key={field} className="flex flex-col space-y-2">
+            {/* Label */}
             <label className="flex items-center space-x-2 text-gray-700 font-medium">
               <Paperclip size={20} />
               <span>{label}</span>
             </label>
 
+            {/* Dropzone */}
             <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-indigo-500 hover:bg-indigo-50 transition">
               {files && files.length > 0 ? (
                 <ul className="space-y-2">
@@ -178,15 +195,13 @@ export default function Step5Files() {
                           {f.error && <span className="text-red-500 text-sm mt-1">{f.error}</span>}
                         </div>
 
-                        <div className="flex justify-center items-end ml-2">
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveFile(field as "resume" | "coverLetter", f.id)}
-                            className="p-2 rounded-full bg-red-500 hover:bg-red-600 text-white transition-all shadow-md"
-                          >
-                            <AiOutlineDelete size={20} />
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFile(field as "resume" | "coverLetter", f.id)}
+                          className="p-2 rounded-full bg-red-500 hover:bg-red-600 text-white transition-all shadow-md"
+                        >
+                          <AiOutlineDelete size={20} />
+                        </button>
                       </li>
                     ) : null
                   )}
@@ -203,7 +218,7 @@ export default function Step5Files() {
                 accept=".pdf,.doc,.docx"
                 onChange={(e) => handleFileChange(e, field as "resume" | "coverLetter")}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                multiple={field === "coverLetter"}
+                multiple={field === "coverLetter"} // only cover letters can be multiple
               />
             </div>
 
@@ -218,3 +233,4 @@ export default function Step5Files() {
     </section>
   );
 }
+

@@ -1,6 +1,8 @@
+
+
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useForm, FormProvider, SubmitHandler } from "react-hook-form";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -67,35 +69,34 @@ export default function JobSeekerMultiStepForm() {
     <Step5Files key={4} />,
   ];
 
-  // ✅ Improved Next Button Logic
+  // ✅ Improved step validation logic
   const handleNext = async () => {
-    if (validating) return; // prevent double clicks
+    if (validating) return;
     setValidating(true);
 
     try {
-      const isValid =
-        step === 4 ? await methods.trigger("resume") : await methods.trigger();
-
+      const isValid = await methods.trigger();
       if (isValid) {
         setStep((prev) => Math.min(prev + 1, steps.length - 1));
       }
     } finally {
-      // add small timeout to avoid skipping on double-click
       setTimeout(() => setValidating(false), 400);
     }
   };
 
-  // Safe Previous
   const handlePrevious = () => {
     if (validating) return;
     setStep((prev) => Math.max(prev - 1, 0));
   };
 
+  // 🟢 Improved Submit Logic
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     try {
+      // ✅ Defensive payload construction
       const resumeUrl = data.resume?.[0]?.uploadedUrl || "";
-      const coverLetterUrls =
-        data.coverLetter?.map((f) => f.uploadedUrl).filter(Boolean) || [];
+      const coverLetterUrls = Array.isArray(data.coverLetter)
+        ? data.coverLetter.map((f) => f.uploadedUrl).filter(Boolean)
+        : [];
 
       if (!resumeUrl) {
         alert("Please upload your resume before submitting.");
@@ -105,40 +106,41 @@ export default function JobSeekerMultiStepForm() {
       const payload = {
         ...data,
         resume: resumeUrl,
-        coverLetter: coverLetterUrls.length ? coverLetterUrls : undefined,
+        coverLetter: coverLetterUrls, // cover letter remains optional
       };
 
-      if (session?.user?.id) {
-        const res = await fetch(`/api/jobseekerprofile/${session.user.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        const result = await res.json();
-        if (result.success) {
-          alert("✅ Profile updated successfully!");
+      const endpoint = session?.user?.id
+        ? `/api/jobseekerprofile/${session.user.id}`
+        : "/api/jobseekers";
+
+      const method = session?.user?.id ? "PUT" : "POST";
+
+      const res = await fetch(endpoint, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        alert(
+          session?.user?.id
+            ? "✅ Profile updated successfully!"
+            : "✅ Registered successfully! Please login."
+        );
+        methods.reset();
+        if (session?.user?.id) {
           router.push("/jobseekerdashboard");
         } else {
-          alert(result.error || "Failed to update profile.");
-        }
-      } else {
-        const res = await fetch("/api/jobseekers", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        const result = await res.json();
-        if (result.success) {
-          alert("✅ Registered successfully! Please login.");
-          methods.reset();
           setStep(0);
           setMode("login");
-        } else {
-          alert(result.error || "Failed to register.");
         }
+      } else {
+        alert(result.error || "Something went wrong.");
       }
     } catch (err) {
-      console.error(err);
+      console.error("Submit Error:", err);
       alert("Something went wrong. Please try again.");
     }
   };
@@ -146,7 +148,7 @@ export default function JobSeekerMultiStepForm() {
   return (
     <FormProvider {...methods}>
       <div className="max-w-4xl mx-auto p-6">
-        {/* Mode Toggle */}
+        {/* Toggle between Register and Login */}
         <div className="flex justify-center gap-8 mb-8">
           <label className="flex items-center gap-2 cursor-pointer font-medium text-gray-700">
             <input
@@ -174,7 +176,7 @@ export default function JobSeekerMultiStepForm() {
 
         {mode === "register" ? (
           <>
-            {/* Progress Indicator */}
+            {/* Progress bar */}
             <div className="flex items-center justify-between mb-10 relative">
               {steps.map((_, idx) => (
                 <div key={idx} className="flex-1 relative">
@@ -200,15 +202,8 @@ export default function JobSeekerMultiStepForm() {
               ))}
             </div>
 
-            {/* Form */}
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (step === steps.length - 1) {
-                  methods.handleSubmit(onSubmit)(e);
-                }
-              }}
-            >
+            {/* 🟢 Simplified Form Submission */}
+            <form onSubmit={methods.handleSubmit(onSubmit)}>
               <AnimatePresence mode="wait">
                 <motion.div
                   key={step}
@@ -221,14 +216,13 @@ export default function JobSeekerMultiStepForm() {
                 </motion.div>
               </AnimatePresence>
 
-              {/* Navigation */}
               <div className="flex justify-between pt-6">
                 {step > 0 ? (
                   <button
                     type="button"
                     onClick={handlePrevious}
                     disabled={validating}
-                    className="px-5 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-5 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 disabled:opacity-50"
                   >
                     ← Previous
                   </button>
@@ -258,8 +252,7 @@ export default function JobSeekerMultiStepForm() {
                   </button>
                 ) : (
                   <button
-                    type="button"
-                    onClick={methods.handleSubmit(onSubmit)}
+                    type="submit"
                     className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                   >
                     ✅ Submit
@@ -269,7 +262,7 @@ export default function JobSeekerMultiStepForm() {
             </form>
           </>
         ) : (
-          // Login Section
+          // Login form
           <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md mx-auto border border-gray-100">
             <h2 className="text-2xl font-semibold mb-6 text-center text-gray-800">
               Login to Your Account
@@ -278,20 +271,20 @@ export default function JobSeekerMultiStepForm() {
               className="space-y-4"
               onSubmit={async (e) => {
                 e.preventDefault();
-                const email = (e.currentTarget.elements.namedItem(
-                  "email"
-                ) as HTMLInputElement).value;
-                const password = (e.currentTarget.elements.namedItem(
-                  "password"
-                ) as HTMLInputElement).value;
+                const email = (
+                  e.currentTarget.elements.namedItem("email") as HTMLInputElement
+                ).value;
+                const password = (
+                  e.currentTarget.elements.namedItem("password") as HTMLInputElement
+                ).value;
+
                 try {
                   const res = await signIn("jobseeker-login", {
                     redirect: false,
                     email,
                     password,
                   });
-                  if (res?.error)
-                    return alert(res.error || "Invalid credentials");
+                  if (res?.error) return alert(res.error);
                   const session = await getSession();
                   if (session?.user?.id)
                     localStorage.setItem("jobSeekerId", session.user.id);
