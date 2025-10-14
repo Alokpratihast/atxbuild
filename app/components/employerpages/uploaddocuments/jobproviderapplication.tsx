@@ -1,183 +1,191 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { FiUpload } from "react-icons/fi";
+import toast, { Toaster } from "react-hot-toast";
+import * as z from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useSession } from "next-auth/react";
 
 type ProviderType = "company" | "individual";
 
-interface FormValues {
-  providerType: ProviderType;
-  companyName?: string;
-  companyRegNumber?: string;
-  companyWebsite?: string;
-  companyEmail?: string;
-  contactName: string;
-  contactEmail: string;
-  contactPhone?: string;
-  address?: string;
+// Validation schema
+const FormSchema = z.object({
+  providerType: z.enum(["company", "individual"]),
+  contactName: z.string().min(3, "Name must be at least 3 characters"),
+  contactEmail: z.string().email("Invalid email address"),
+});
+
+type FormValues = z.infer<typeof FormSchema> & {
   companyRegDoc?: FileList;
   gstOrPan?: FileList;
   addressProof?: FileList;
   authorizedPersonId?: FileList;
   experienceLetter?: FileList;
-}
+};
 
-interface JobProviderVerificationFormProps {
-  onSuccess?: () => void; // callback to refresh dashboard
-}
+// Allowed file types and max size
+const FILE_TYPES = ["application/pdf", "image/png", "image/jpeg"];
+const MAX_FILE_SIZE_MB = 5;
 
-export default function JobProviderVerificationForm({ onSuccess }: JobProviderVerificationFormProps) {
-  const { register, handleSubmit, watch, reset } = useForm<FormValues>({
-    defaultValues: { providerType: "company" as ProviderType },
+export default function JobProviderVerificationForm({ onSuccess }: { onSuccess?: () => void }) {
+  const { data: session } = useSession();
+
+  const { register, handleSubmit, watch, reset, setValue, formState: { errors } } = useForm<FormValues>({
+    resolver: zodResolver(FormSchema),
+    defaultValues: { providerType: "company" },
   });
 
   const providerType = watch("providerType");
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [errors, setErrors] = useState<string | null>(null);
 
-  const initialFilesState: Record<string, File | null> = {
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File | null>>({
     companyRegDoc: null,
     gstOrPan: null,
     addressProof: null,
     authorizedPersonId: null,
     experienceLetter: null,
-  };
+  });
 
-  const [uploadedFiles, setUploadedFiles] = useState(initialFilesState);
+  const [loading, setLoading] = useState(false);
+
+  // Autofill email from session and make it read-only
+  useEffect(() => {
+    if (session?.user?.email) {
+      setValue("contactEmail", session.user.email);
+    }
+  }, [session, setValue]);
 
   const handleFileChange = (key: string, files: FileList | null) => {
-    if (files && files[0]) {
-      setUploadedFiles(prev => ({ ...prev, [key]: files[0] }));
+    if (!files || !files[0]) return;
+
+    const file = files[0];
+
+    // Validate file type
+    if (!FILE_TYPES.includes(file.type)) {
+      toast.error(`Invalid file type for ${key}. Only PDF, PNG, JPG allowed`);
+      return;
     }
+
+    // Validate file size
+    if (file.size / 1024 / 1024 > MAX_FILE_SIZE_MB) {
+      toast.error(`${key} exceeds ${MAX_FILE_SIZE_MB} MB`);
+      return;
+    }
+
+    setUploadedFiles(prev => ({ ...prev, [key]: file }));
   };
 
   const onSubmit = async (data: FormValues) => {
+    if (providerType === "company" && !uploadedFiles.companyRegDoc) {
+      toast.error("Company registration document is required");
+      return;
+    }
+
     setLoading(true);
-    setMessage(null);
-    setErrors(null);
 
     try {
       const formData = new FormData();
       formData.append("providerType", data.providerType);
       formData.append("contactName", data.contactName);
-      formData.append("contactEmail", data.contactEmail);
-      if (data.contactPhone) formData.append("contactPhone", data.contactPhone);
-      if (data.address) formData.append("address", data.address);
+      formData.append("contactEmail", data.contactEmail); // auto-filled
 
-      if (providerType === "company") {
-        data.companyName && formData.append("companyName", data.companyName);
-        data.companyRegNumber && formData.append("companyRegNumber", data.companyRegNumber);
-        data.companyWebsite && formData.append("companyWebsite", data.companyWebsite);
-        data.companyEmail && formData.append("companyEmail", data.companyEmail);
-      }
-
-      // Append all files to key "files"
-      Object.values(uploadedFiles).forEach(file => {
-        if (file) formData.append("files", file);
+      Object.entries(uploadedFiles).forEach(([key, file]) => {
+        if (file) formData.append(key, file);
       });
 
-      const res = await fetch("/api/employeeregister/upload-document", {
-        method: "POST",
-        body: formData,
-      });
-
+      const res = await fetch("/api/upload-documents", { method: "POST", body: formData });
       const result = await res.json();
-      if (!res.ok || !result.success) throw new Error(result.error || "Upload failed");
 
-      setMessage("Your documents were submitted and are pending admin review.");
+      if (!res.ok) throw new Error(result.message || "Upload failed");
+
+      toast.success("Application submitted successfully!");
       reset();
-      setUploadedFiles(initialFilesState);
+      setUploadedFiles({
+        companyRegDoc: null,
+        gstOrPan: null,
+        addressProof: null,
+        authorizedPersonId: null,
+        experienceLetter: null,
+      });
       onSuccess?.();
     } catch (err: any) {
       console.error(err);
-      setErrors(err.message || "Upload failed");
+      toast.error(err.message || "Failed to submit application");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-200 dark:border-gray-700 mb-8">
-      <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Job Provider Verification</h2>
-      {message && <div className="text-green-600 dark:text-green-400 mb-2">{message}</div>}
-      {errors && <div className="text-red-600 dark:text-red-400 mb-2">{errors}</div>}
+    <div className="max-w-3xl mx-auto p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700">
+      <Toaster position="top-right" />
+      <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-6">Job Provider Verification</h2>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6">
         {/* Provider Type */}
-        <div className="md:col-span-2 flex gap-4 items-center mb-4">
+        <div className="flex gap-6 items-center">
           <label className="flex items-center gap-2">
-            <input type="radio" value="company" {...register("providerType")} defaultChecked />
-            <span className="text-sm">Company</span>
+            <input type="radio" value="company" {...register("providerType")} defaultChecked className="accent-blue-600" />
+            <span className="text-gray-700 dark:text-gray-300 font-medium">Company</span>
           </label>
           <label className="flex items-center gap-2">
-            <input type="radio" value="individual" {...register("providerType")} />
-            <span className="text-sm">Individual Recruiter</span>
+            <input type="radio" value="individual" {...register("providerType")} className="accent-blue-600" />
+            <span className="text-gray-700 dark:text-gray-300 font-medium">Individual</span>
           </label>
         </div>
 
-        {/* Company Fields */}
-        {providerType === "company" && (
-          <>
-            <div className="md:col-span-2 flex flex-col gap-2 p-4 border rounded-lg bg-gray-50 dark:bg-gray-700">
-              <label>Company Name</label>
-              <input type="text" {...register("companyName")} placeholder="Acme Pvt Ltd" className="w-full rounded-lg border p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
-            </div>
-
-            <div className="md:col-span-2 flex flex-col gap-2 p-4 border rounded-lg bg-gray-50 dark:bg-gray-700">
-              <label>Registration Number</label>
-              <input type="text" {...register("companyRegNumber")} placeholder="Enter registration number" className="w-full rounded-lg border p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none mb-2" />
-              <label className="flex items-center justify-between p-3 border rounded-lg cursor-pointer bg-gray-100 dark:bg-gray-600 hover:border-blue-500">
-                <span>{uploadedFiles.companyRegDoc?.name || "Upload Certificate of Incorporation"}</span>
-                <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={e => handleFileChange("companyRegDoc", e.target.files)} />
-              </label>
-            </div>
-
-            {["gstOrPan", "addressProof", "authorizedPersonId"].map(key => (
-              <label key={key} className="md:col-span-2 flex items-center justify-between p-4 border rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-700 hover:border-blue-500">
-                <span>{uploadedFiles[key]?.name || `Upload ${key}`}</span>
-                <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={e => handleFileChange(key, e.target.files)} />
-              </label>
-            ))}
-          </>
-        )}
-
-        {/* Individual Fields */}
-        {providerType === "individual" && (
-          <>
-            <div className="md:col-span-2 flex flex-col gap-2 p-4 border rounded-lg bg-gray-50 dark:bg-gray-700">
-              <label>Full Name</label>
-              <input type="text" {...register("contactName", { required: true })} className="w-full rounded-lg border p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
-            </div>
-
-            {["authorizedPersonId", "experienceLetter", "gstOrPan"].map(key => (
-              <label key={key} className="md:col-span-2 flex items-center justify-between p-4 border rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-700 hover:border-blue-500">
-                <span>{uploadedFiles[key]?.name || `Upload ${key}`}</span>
-                <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={e => handleFileChange(key, e.target.files)} />
-              </label>
-            ))}
-          </>
-        )}
-
-        {/* Contact Fields */}
-        {[
-          { label: "Contact Person Name", name: "contactName", type: "text", required: true },
-          { label: "Contact Email", name: "contactEmail", type: "email", required: true },
-          { label: "Contact Phone (optional)", name: "contactPhone", type: "text", required: false },
-          { label: "Address (optional)", name: "address", type: "text", required: false },
-        ].map(field => (
-          <div key={field.name} className="md:col-span-2 flex flex-col gap-2 p-4 border rounded-lg bg-gray-50 dark:bg-gray-700">
-            <label>{field.label}</label>
-            <input type={field.type} {...register(field.name as any, { required: field.required })} className="w-full rounded-lg border p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+        {/* Contact Info */}
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="flex flex-col">
+            <input
+              type="text"
+              placeholder="Full Name"
+              {...register("contactName")}
+              className="border p-3 rounded-lg text-gray-700 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+            {errors.contactName && <span className="text-red-500 text-sm mt-1">{errors.contactName.message}</span>}
           </div>
+          <div className="flex flex-col">
+            <input
+              type="email"
+              placeholder="Contact Email"
+              {...register("contactEmail")}
+              readOnly
+              className="border p-3 rounded-lg text-gray-700 dark:text-gray-100 bg-gray-200 dark:bg-gray-600 focus:outline-none cursor-not-allowed"
+            />
+            {errors.contactEmail && <span className="text-red-500 text-sm mt-1">{errors.contactEmail.message}</span>}
+          </div>
+        </div>
+
+        {/* File Uploads */}
+        {["companyRegDoc", "gstOrPan", "addressProof", "authorizedPersonId", "experienceLetter"].map(key => (
+          <label
+            key={key}
+            className="flex items-center justify-between border border-gray-300 dark:border-gray-600 rounded-lg p-4 cursor-pointer hover:border-blue-500 transition-colors bg-gray-50 dark:bg-gray-700"
+          >
+            <div className="flex items-center gap-2">
+              <FiUpload className="text-blue-600 dark:text-blue-400" size={20} />
+              <span className="text-gray-700 dark:text-gray-300">{uploadedFiles[key]?.name || `Upload ${key}`}</span>
+            </div>
+            <input type="file" className="hidden" onChange={e => handleFileChange(key, e.target.files)} />
+          </label>
         ))}
 
-        {/* Submit */}
-        <div className="md:col-span-2 flex gap-3 mt-2">
-          <button type="submit" disabled={loading} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-3 rounded-lg shadow">
+        {/* Submit Button */}
+        <div className="flex gap-4">
+          <button
+            type="submit"
+            disabled={loading}
+            className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-3 rounded-lg shadow transition-colors"
+          >
             {loading ? "Submitting..." : "Submit for Verification"}
           </button>
-          <button type="button" onClick={() => { reset(); setMessage(null); setErrors(null); setUploadedFiles(initialFilesState); }} className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-3 rounded-lg">
+          <button
+            type="button"
+            onClick={() => { reset(); setUploadedFiles({ companyRegDoc: null, gstOrPan: null, addressProof: null, authorizedPersonId: null, experienceLetter: null }); }}
+            className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-3 rounded-lg transition-colors"
+          >
             Reset
           </button>
         </div>

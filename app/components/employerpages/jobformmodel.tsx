@@ -1,7 +1,3 @@
-//////////////////////////////////////////////////////////////////////////
-// File: app/components/employerpages/jobformmodel.tsx
-// Description: Modal form component for creating and editing job postings by employers.
-//////////////////////////////////////////////////////////////////////////
 "use client";
 
 import { useEffect, useState } from "react";
@@ -49,6 +45,7 @@ export default function JobFormModal({ editingJob, onClose, onSuccess }: JobForm
   });
 
   const [loading, setLoading] = useState(false);
+  const [isVerified, setIsVerified] = useState<boolean | null>(null); // provider verification state
 
   // Populate form for editing
   useEffect(() => {
@@ -71,6 +68,21 @@ export default function JobFormModal({ editingJob, onClose, onSuccess }: JobForm
     }
   }, [editingJob]);
 
+  // Fetch provider verification status
+  useEffect(() => {
+    const fetchVerification = async () => {
+      try {
+        const res = await fetch("/api/employeeregister/providerstatus", { credentials: "include" });
+        const data = await res.json();
+        setIsVerified(res.ok && data.verified);
+      } catch (err) {
+        console.error("Verification check failed:", err);
+        setIsVerified(false);
+      }
+    };
+    fetchVerification();
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     if (e.target.type === "checkbox") {
@@ -85,6 +97,11 @@ export default function JobFormModal({ editingJob, onClose, onSuccess }: JobForm
 
     if (!session?.user?.id) {
       toast.error("You must be logged in to create or edit jobs.");
+      return;
+    }
+
+    if (isVerified === false) {
+      toast.error("Your account is not verified by admin. Cannot submit jobs.");
       return;
     }
 
@@ -114,11 +131,9 @@ export default function JobFormModal({ editingJob, onClose, onSuccess }: JobForm
     try {
       const method = editingJob ? "PUT" : "POST";
 
-      // Decide API route based on user role
       const apiRoute = editingJob
-        ? `/api/employeeregister/employerjobs/${editingJob._id}` // Edit existing job
-        : "/api/employeeregister/employerjobs";                  // Create new job
-
+        ? `/api/employeeregister/employerjobs/${editingJob._id}`
+        : "/api/employeeregister/employerjobs";
 
       const payload: Job = {
         ...formData,
@@ -136,7 +151,7 @@ export default function JobFormModal({ editingJob, onClose, onSuccess }: JobForm
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-        credentials: "include", // include cookies if your API uses sessions
+        credentials: "include",
       });
 
       const data = await res.json();
@@ -161,6 +176,12 @@ export default function JobFormModal({ editingJob, onClose, onSuccess }: JobForm
       <div className="bg-white rounded-lg shadow-lg w-full max-w-lg p-6">
         <h2 className="text-xl font-bold mb-4">{editingJob ? "Edit Job" : "Add Job"}</h2>
 
+        {isVerified === false && (
+          <p className="text-red-500 mb-2">
+            Your provider account is not yet approved by admin. You cannot submit jobs.
+          </p>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <input name="title" value={formData.title} onChange={handleChange} placeholder="Job Title" className="w-full border rounded p-2" required />
           <textarea name="description" value={formData.description} onChange={handleChange} placeholder="Job Description" className="w-full border rounded p-2" required />
@@ -184,7 +205,15 @@ export default function JobFormModal({ editingJob, onClose, onSuccess }: JobForm
 
           <div className="flex justify-end gap-2">
             <button type="button" onClick={onClose} className="px-4 py-2 border rounded hover:bg-gray-100">Cancel</button>
-            <button type="submit" disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">{loading ? "Saving..." : editingJob ? "Update" : "Create"}</button>
+            <button
+              type="submit"
+              disabled={loading || isVerified === false}
+              className={`px-4 py-2 rounded text-white ${
+                loading || isVerified === false ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+              }`}
+            >
+              {loading ? "Saving..." : editingJob ? "Update" : "Create"}
+            </button>
           </div>
         </form>
       </div>

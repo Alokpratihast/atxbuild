@@ -1,11 +1,3 @@
-// import EmployerJobDashboard from "@/components/employerpages/employerjobpost/jobposting";
-
-// export default function JobPostPage() {
-//   return <EmployerJobDashboard />;
-// }
-
-
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -15,7 +7,7 @@ import { useSession } from "next-auth/react";
 import JobFormModal, { Job } from "@/components/employerpages/jobformmodel";
 
 export default function EmployerJobDashboard() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -27,6 +19,7 @@ export default function EmployerJobDashboard() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingJob, setEditingJob] = useState<Job | null>(null);
+  const [isVerified, setIsVerified] = useState<boolean | null>(null);
 
   // Fetch jobs created by this employer
   const fetchJobs = async () => {
@@ -54,15 +47,35 @@ export default function EmployerJobDashboard() {
     }
   };
 
+  // Check provider verification status
+  const checkVerification = async () => {
+    if (!session?.user?.id) return;
+
+    try {
+      const res = await fetch(`/api/employeeregister/providerstatus`, { credentials: "include" });
+      const data = await res.json();
+      setIsVerified(res.ok && data.verified);
+    } catch (err) {
+      console.error("Verification check failed:", err);
+      setIsVerified(false);
+    }
+  };
+
+  // Fetch jobs and verification only when session is ready
   useEffect(() => {
+    if (status !== "authenticated") return;
     fetchJobs();
-  }, [search, filter, page, sortBy, sortOrder, session?.user?.id]);
+    checkVerification();
+  }, [status, search, filter, page, sortBy, sortOrder]);
 
   // Delete job
   const deleteJob = async (id: string) => {
     try {
       setActionLoading(id);
-      const res = await fetch(`/api/employeeregister/employerjobs/${id}`, { method: "DELETE", credentials: "include" });
+      const res = await fetch(`/api/employeeregister/employerjobs/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
       const data = await res.json();
       if (res.ok) {
         toast.success("Job deleted successfully");
@@ -110,10 +123,17 @@ export default function EmployerJobDashboard() {
         <h1 className="text-2xl font-bold">My Jobs</h1>
         <button
           onClick={() => {
+            if (isVerified === false) {
+              toast.error("Your account is not verified by admin. Cannot post jobs.");
+              return;
+            }
             setEditingJob(null);
             setIsModalOpen(true);
           }}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          disabled={isVerified === null || isVerified === false}
+          className={`bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 ${
+            isVerified === null ? "opacity-50 cursor-not-allowed" : ""
+          }`}
         >
           + Add Job
         </button>

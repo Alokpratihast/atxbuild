@@ -65,7 +65,7 @@ const JobSchema: Schema = new Schema(
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Admin", // reference to Admin model
+      ref: "employer", // reference to employer model
       required: true,
     },
     isActive: {
@@ -76,4 +76,5 @@ const JobSchema: Schema = new Schema(
   { timestamps: true }
 );
 
-export default mongoose.models.Job || mongoose.model<IJob>("employerJob", JobSchema);
+export default mongoose.models.employerJob || mongoose.model<IJob>("employerJob", JobSchema);
+

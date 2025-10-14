@@ -1,6 +1,14 @@
-import Career from "@/components/Menupages/Career"
+import Career from "@/components/Menupages/Career";
+import { getSeoMetadata } from "@/lib/getSeoMetadata";
+import { Metadata } from "next";
 
+// Dynamic SEO for Career page
+export async function generateMetadata(): Promise<Metadata> {
+  const seo = await getSeoMetadata("career"); // slug = "career"
+  return seo;
+}
 
-export default function careerpage(){
-    return <Career/>
+// Server page wrapper
+export default function CareerPageWrapper() {
+  return <Career />; // Your client component stays as-is
 }

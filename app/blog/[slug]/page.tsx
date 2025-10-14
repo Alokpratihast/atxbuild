@@ -2,10 +2,41 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { blogs } from "@/models/blogdata";
+import { Metadata } from "next";
 
-type Props = {
-  params: { slug: string };
-};
+type Props = { params: { slug: string } };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const blog = blogs.find((b) => b.slug === params.slug);
+
+  if (!blog) {
+    return {
+      title: "Blog - ATX Technologies",
+      description: "Read articles on ATX Technologies",
+      metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"),
+    };
+  }
+
+  return {
+    title: blog.title,
+    description: blog.desc,
+    openGraph: {
+      title: blog.title,
+      description: blog.desc,
+      url: `${process.env.NEXT_PUBLIC_BASE_URL}/blog/${blog.slug}`,
+      images: blog.image ? [{ url: blog.image }] : [],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: blog.title,
+      description: blog.desc,
+      images: blog.image ? [{ url: blog.image }] : [],
+    },
+    metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"),
+  };
+}
+
+// 
 
 export default function BlogDetailPage({ params }: Props) {
   // Find blog by slug

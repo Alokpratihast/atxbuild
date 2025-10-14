@@ -1,23 +1,51 @@
-export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
-import { connectedToDatabase } from "@/lib/db";
-import Seo from "@/models/seo-model";
+import SEO from "@/models/seo-model";
+import { z, ZodError } from "zod";
 
-// GET all SEO configs
-export async function GET() {
-  await connectedToDatabase();
-  const seo = await Seo.find();
-  return NextResponse.json({ success: true, seo });
-}
+const seoSchema = z.object({
+  page: z.string().min(1),
+  title: z.string().min(1),
+  description: z.string().min(1),
+  keywords: z.array(z.string()).optional(),
+  canonical: z.string().url().optional(),
+  ogImage: z.string().url().optional(),
+  twitterCard: z.string().url().optional(),
+  schema: z.string().optional(),
+});
 
-// POST new SEO config
-export async function POST(req: NextRequest) {
+export const GET = async () => {
   try {
-    await connectedToDatabase();
-    const body = await req.json();
-    const seo = await Seo.create(body);
-    return NextResponse.json({ success: true, seo }, { status: 201 });
-  } catch {
-    return NextResponse.json({ success: false, error: "Failed to create SEO" }, { status: 500 });
+    const seoList = await SEO.find();
+    return NextResponse.json(seoList);
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
-}
+};
+
+export const POST = async (req: NextRequest) => {
+  try {
+    const body = await req.json();
+    const validated = seoSchema.parse(body);
+
+    const existing = await SEO.findOne({ page: validated.page });
+    if (existing) return NextResponse.json({ error: "Page SEO exists" }, { status: 400 });
+
+    const seo = await SEO.create({
+      ...validated,
+      keywords: validated.keywords || [],
+      canonical: validated.canonical || "",
+      ogImage: validated.ogImage || "",
+      twitterCard: validated.twitterCard || "",
+      schema: validated.schema || "",
+    });
+
+    return NextResponse.json(seo);
+  } catch (err) {
+    if (err instanceof ZodError) {
+      // Use err.issues instead of err.errors
+      return NextResponse.json({ errors: err.issues }, { status: 422 });
+    }
+    const errorMessage = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
+  }
+};

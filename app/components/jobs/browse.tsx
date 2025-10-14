@@ -1,7 +1,6 @@
 "use client";
 export const dynamic = "force-dynamic";
 
-
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Search } from "lucide-react";
@@ -28,19 +27,44 @@ export default function BrowseJobs() {
   const [currentPage, setCurrentPage] = useState(1);
   const jobsPerPage = 6;
 
-  // Fetch jobs
+  // 🧩 Fetch both admin + provider jobs
   useEffect(() => {
     const fetchJobs = async () => {
+      setLoading(true);
       try {
-        const res = await fetch("/api/jobs", { cache: "no-store" },);
-        const data = await res.json();
+        // Fetch both APIs in parallel
+        const [adminRes, providerRes] = await Promise.all([
+          fetch("/api/jobs", { cache: "no-store" }),
+          fetch("/api/employeeregister/employerjobs", { cache: "no-store" }),
+        ]);
 
-        if (data.success) {
-          // Only show active jobs
-          const activeJobs = data.jobs.filter((job: Job) => job.isActive);
-          setJobs(activeJobs);
-          setFilteredJobs(activeJobs);
+        const [adminData, providerData] = await Promise.all([
+          adminRes.json(),
+          providerRes.json(),
+        ]);
+
+        let combined: Job[] = [];
+
+        if (adminData.success) {
+          const activeAdminJobs = adminData.jobs.filter((j: Job) => j.isActive);
+          combined = [...combined, ...activeAdminJobs];
         }
+
+        if (providerData.success) {
+          const activeProviderJobs = providerData.jobs.filter(
+            (j: Job) => j.isActive
+          );
+          combined = [...combined, ...activeProviderJobs];
+        }
+
+        // Sort by latest deadline (or created date if needed)
+        combined.sort(
+          (a, b) =>
+            new Date(b.deadline).getTime() - new Date(a.deadline).getTime()
+        );
+
+        setJobs(combined);
+        setFilteredJobs(combined);
       } catch (error) {
         console.error("Error fetching jobs:", error);
       } finally {
@@ -51,7 +75,7 @@ export default function BrowseJobs() {
     fetchJobs();
   }, []);
 
-  // Filter jobs by search term
+  // 🔍 Search filter
   useEffect(() => {
     const filtered = jobs.filter(
       (job) =>
@@ -60,7 +84,7 @@ export default function BrowseJobs() {
         job.location.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredJobs(filtered);
-    setCurrentPage(1); // reset to first page after search
+    setCurrentPage(1);
   }, [searchTerm, jobs]);
 
   // Pagination logic
@@ -71,7 +95,7 @@ export default function BrowseJobs() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-6 md:px-16">
-      {/* Search Bar */}
+      {/* 🔍 Search Bar */}
       <div className="max-w-3xl mx-auto mb-8 flex items-center bg-white shadow rounded-lg px-4 py-2">
         <Search className="text-gray-400 w-5 h-5 mr-2" />
         <input
@@ -83,7 +107,7 @@ export default function BrowseJobs() {
         />
       </div>
 
-      {/* Job Listings */}
+      {/* 🧱 Job Listings */}
       {loading ? (
         <p className="text-center text-gray-500">Loading jobs...</p>
       ) : filteredJobs.length === 0 ? (
@@ -117,7 +141,7 @@ export default function BrowseJobs() {
         </motion.div>
       )}
 
-      {/* Pagination */}
+      {/* 📄 Pagination */}
       {totalPages > 1 && (
         <div className="flex justify-center mt-8 space-x-2">
           {Array.from({ length: totalPages }, (_, i) => (
@@ -136,7 +160,7 @@ export default function BrowseJobs() {
         </div>
       )}
 
-      {/* Apply Modal */}
+      {/* 💼 Apply Modal */}
       {selectedJob && (
         <ApplyModal job={selectedJob} onClose={() => setSelectedJob(null)} />
       )}

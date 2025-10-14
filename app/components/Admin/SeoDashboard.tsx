@@ -1,136 +1,127 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
+import SeoFormModal, { SEOFormData } from "@/components/Admin/SeoFormModal";
 import { toast } from "react-hot-toast";
-import SeoFormModal from "@/components/Admin/SeoFormModal";
-import { FiEdit, FiTrash2 } from "react-icons/fi";
 
-interface Seo {
-  _id?: string;
-  page: string;
-  title: string;
-  description: string;
-  keywords: string[];
-}
+const SeoDashboard = () => {
+  const [seoList, setSeoList] = useState<SEOFormData[]>([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingSEO, setEditingSEO] = useState<SEOFormData | null>(null);
 
-export default function SeoDashboard() {
-  const [seoList, setSeoList] = useState<Seo[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingSeo, setEditingSeo] = useState<Seo | null>(null);
-
-  const fetchSeo = async () => {
+  // 1️⃣ Fetch all SEO entries
+  const fetchSEO = async () => {
     try {
-      setLoading(true);
       const res = await fetch("/api/seo");
       const data = await res.json();
-      if (res.ok) setSeoList(data.seo);
-      else toast.error(data.error || "Failed to fetch SEO data");
-    } catch {
-      toast.error("Something went wrong while fetching SEO data");
-    } finally {
-      setLoading(false);
+      setSeoList(data);
+    } catch (err: any) {
+      toast.error("Failed to fetch SEO data");
     }
   };
 
-  useEffect(() => {
-    fetchSeo();
-  }, []);
+  useEffect(() => { fetchSEO(); }, []);
 
-  const deleteSeo = async (id: string) => {
+  // 2️⃣ Handle create or update
+  const handleCreateOrUpdate = async (data: SEOFormData) => {
     try {
-      setActionLoading(id);
+      const res = editingSEO
+        ? await fetch(`/api/seo/${editingSEO._id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+          })
+        : await fetch("/api/seo", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+          });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Error saving SEO");
+
+      toast.success(editingSEO ? "SEO Updated!" : "SEO Created!");
+      setModalOpen(false);
+      setEditingSEO(null);
+      fetchSEO();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  // 3️⃣ Handle delete
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this SEO entry?")) return;
+    try {
       const res = await fetch(`/api/seo/${id}`, { method: "DELETE" });
-      const data = await res.json();
-      if (res.ok) {
-        toast.success("SEO entry deleted successfully");
-        fetchSeo();
-      } else toast.error(data.error || "Failed to delete SEO entry");
-    } catch {
-      toast.error("Something went wrong");
-    } finally {
-      setActionLoading(null);
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Failed to delete SEO");
+      toast.success("Deleted successfully!");
+      fetchSEO();
+    } catch (err: any) {
+      toast.error(err.message);
     }
   };
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">SEO Metadata Management</h1>
-        <button
-          onClick={() => {
-            setEditingSeo(null);
-            setIsModalOpen(true); // ✅ open modal
-          }}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          + Add SEO
-        </button>
-      </div>
+      <h1 className="text-2xl font-bold mb-4">SEO Management Dashboard</h1>
 
-      {/* Table */}
-      <div className="overflow-x-auto shadow-md rounded-lg">
-        <table className="w-full border border-gray-200">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="p-3 text-left">Page</th>
-              <th className="p-3 text-left">Title</th>
-              <th className="p-3 text-left">Description</th>
-              <th className="p-3 text-left">Keywords</th>
-              <th className="p-3 text-left">Actions</th>
+      <button
+        className="mb-4 bg-blue-600 text-white px-4 py-2 rounded"
+        onClick={() => setModalOpen(true)}
+      >
+        Add SEO
+      </button>
+
+      <table className="w-full border border-gray-300">
+        <thead>
+          <tr className="bg-gray-100">
+            <th className="border p-2">Page</th>
+            <th className="border p-2">Title</th>
+            <th className="border p-2">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {seoList.map((seo) => (
+            <tr key={seo._id}>
+              <td className="border p-2">{seo.page}</td>
+              <td className="border p-2">{seo.title}</td>
+              <td className="border p-2 space-x-2">
+                <button
+                  className="bg-yellow-500 text-white px-2 py-1 rounded"
+                  onClick={() => { setEditingSEO(seo); setModalOpen(true); }}
+                >
+                  Edit
+                </button>
+                <button
+                  className="bg-red-600 text-white px-2 py-1 rounded"
+                  onClick={() => handleDelete(seo._id!)}
+                >
+                  Delete
+                </button>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={5} className="text-center p-6">Loading...</td>
-              </tr>
-            ) : seoList.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="text-center p-6">No SEO entries found</td>
-              </tr>
-            ) : (
-              seoList.map((seo) => (
-                <tr key={seo._id} className="border-t">
-                  <td className="p-3">{seo.page}</td>
-                  <td className="p-3">{seo.title}</td>
-                  <td className="p-3">{seo.description}</td>
-                  <td className="p-3">{seo.keywords.join(", ")}</td>
-                  <td className="p-3 flex gap-2">
-                    <button
-                      onClick={() => {
-                        setEditingSeo(seo);
-                        setIsModalOpen(true); // ✅ open modal for editing
-                      }}
-                      className="text-blue-600 hover:text-blue-800"
-                      disabled={actionLoading === seo._id}
-                    >
-                      <FiEdit size={18} />
-                    </button>
-                    <button
-                      onClick={() => deleteSeo(seo._id!)}
-                      className="text-red-600 hover:text-red-800"
-                      disabled={actionLoading === seo._id}
-                    >
-                      <FiTrash2 size={18} />
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+          ))}
+          {seoList.length === 0 && (
+            <tr>
+              <td colSpan={3} className="text-center p-4">
+                No SEO entries found.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
 
-      {/* Modal */}
-      {isModalOpen && (
-        <SeoFormModal
-          editingSeo={editingSeo ?? undefined}
-          onClose={() => setIsModalOpen(false)} // ✅ close modal
-          onSuccess={fetchSeo}
-        />
-      )}
+      {/* 4️⃣ SEO Form Modal */}
+      <SeoFormModal
+        isOpen={modalOpen}
+        onClose={() => { setModalOpen(false); setEditingSEO(null); }}
+        initialData={editingSEO || undefined}
+        onSubmit={handleCreateOrUpdate}
+      />
     </div>
   );
-}
+};
+
+export default SeoDashboard;
