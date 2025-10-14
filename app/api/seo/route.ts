@@ -27,22 +27,25 @@ export const POST = async (req: NextRequest) => {
     const body = await req.json();
     const validated = seoSchema.parse(body);
 
-    const existing = await SEO.findOne({ page: validated.page });
-    if (existing) return NextResponse.json({ error: "Page SEO exists" }, { status: 400 });
-
-    const seo = await SEO.create({
-      ...validated,
-      keywords: validated.keywords || [],
-      canonical: validated.canonical || "",
-      ogImage: validated.ogImage || "",
-      twitterCard: validated.twitterCard || "",
-      schema: validated.schema || "",
-    });
+    // Upsert: create new or update existing page
+    const seo = await SEO.findOneAndUpdate(
+      { page: validated.page },    // Match by page
+      {
+        $set: {
+          ...validated,
+          keywords: validated.keywords || [],
+          canonical: validated.canonical || "",
+          ogImage: validated.ogImage || "",
+          twitterCard: validated.twitterCard || "",
+          schema: validated.schema || "",
+        },
+      },
+      { upsert: true, new: true } // Create if not exists, return the updated document
+    );
 
     return NextResponse.json(seo);
   } catch (err) {
     if (err instanceof ZodError) {
-      // Use err.issues instead of err.errors
       return NextResponse.json({ errors: err.issues }, { status: 422 });
     }
     const errorMessage = err instanceof Error ? err.message : "Unknown error";
