@@ -13,6 +13,8 @@ const seoSchema = z.object({
   schema: z.string().optional(),
 });
 
+
+
 export const GET = async () => {
   try {
     const seoList = await SEO.find();
@@ -22,33 +24,34 @@ export const GET = async () => {
   }
 };
 
+
+
 export const POST = async (req: NextRequest) => {
   try {
     const body = await req.json();
     const validated = seoSchema.parse(body);
 
-    // Upsert: create new or update existing page
     const seo = await SEO.findOneAndUpdate(
-      { page: validated.page },    // Match by page
+      { page: validated.page }, // Match by page
       {
-        $set: {
-          ...validated,
-          keywords: validated.keywords || [],
-          canonical: validated.canonical || "",
-          ogImage: validated.ogImage || "",
-          twitterCard: validated.twitterCard || "",
-          schema: validated.schema || "",
-        },
+        page: validated.page,
+        title: validated.title,
+        description: validated.description,
+        keywords: validated.keywords ?? [],
+        canonical: validated.canonical || undefined,
+        ogImage: validated.ogImage || undefined,
+        twitterCard: validated.twitterCard || undefined,
+        schema: validated.schema || undefined,
       },
-      { upsert: true, new: true } // Create if not exists, return the updated document
+      { upsert: true, new: true } // create if not exists, return updated doc
     );
 
     return NextResponse.json(seo);
   } catch (err) {
     if (err instanceof ZodError) {
-      return NextResponse.json({ errors: err.issues }, { status: 422 });
+      return NextResponse.json({ error: "Validation failed", details: err.issues }, { status: 422 });
     }
-    const errorMessage = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });
   }
 };
+

@@ -8,6 +8,7 @@ const SeoDashboard = () => {
   const [seoList, setSeoList] = useState<SEOFormData[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingSEO, setEditingSEO] = useState<SEOFormData | null>(null);
+  const [viewingSEO, setViewingSEO] = useState<SEOFormData | null>(null);
 
   // 1️⃣ Fetch all SEO entries
   const fetchSEO = async () => {
@@ -89,6 +90,12 @@ const SeoDashboard = () => {
               <td className="border p-2">{seo.title}</td>
               <td className="border p-2 space-x-2">
                 <button
+                  className="bg-blue-500 text-white px-2 py-1 rounded"
+                  onClick={() => setViewingSEO(seo)}
+                >
+                  View
+                </button>
+                <button
                   className="bg-yellow-500 text-white px-2 py-1 rounded"
                   onClick={() => { setEditingSEO(seo); setModalOpen(true); }}
                 >
@@ -120,6 +127,31 @@ const SeoDashboard = () => {
         initialData={editingSEO || undefined}
         onSubmit={handleCreateOrUpdate}
       />
+
+      {/* 5️⃣ View SEO Modal */}
+      {viewingSEO && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white p-6 rounded-lg w-full max-w-lg relative">
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-900"
+              onClick={() => setViewingSEO(null)}
+            >
+              ✕
+            </button>
+            <h2 className="text-xl font-bold mb-4">SEO Details for {viewingSEO.page}</h2>
+            <div className="space-y-2">
+              <p><strong>Title:</strong> {viewingSEO.title}</p>
+              <p><strong>Description:</strong> {viewingSEO.description}</p>
+              <p><strong>Keywords:</strong> {viewingSEO.keywords.join(", ") || "—"}</p>
+              <p><strong>Canonical:</strong> {viewingSEO.canonical || "—"}</p>
+              <p><strong>OG Image:</strong> {viewingSEO.ogImage || "—"}</p>
+              <p><strong>Twitter Card:</strong> {viewingSEO.twitterCard || "—"}</p>
+              <p><strong>Schema JSON:</strong></p>
+              <pre className="bg-gray-100 p-2 rounded">{viewingSEO.schema || "—"}</pre>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
