@@ -1,6 +1,8 @@
 import Career from "@/components/Menupages/Career";
 import { getSeoMetadata } from "@/lib/getSeoMetadata";
 import { Metadata } from "next";
+export const dynamic = "force-dynamic";
+
 
 // Dynamic SEO for Career page
 export async function generateMetadata(): Promise<Metadata> {

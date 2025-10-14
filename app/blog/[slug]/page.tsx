@@ -3,6 +3,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { blogs } from "@/models/blogdata";
 import { Metadata } from "next";
+export const dynamic = "force-dynamic";
+
 
 type Props = { params: { slug: string } };
 

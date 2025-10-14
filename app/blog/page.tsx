@@ -1,6 +1,8 @@
 import Bloggg from "@/components/Menupages/Bloggg";
 import { getSeoMetadata } from "@/lib/getSeoMetadata";
 import { Metadata } from "next";
+export const dynamic = "force-dynamic";
+
 
 // Dynamic SEO for Blog page
 export async function generateMetadata(): Promise<Metadata> {

@@ -6,6 +6,7 @@ import { servicesData } from "@/models/servicesData";
 import GetInTouchButton from "@/components/Aboutgettouch";
 import { getSeoMetadata } from "@/lib/getSeoMetadata";
 import { Metadata } from "next";
+export const dynamic = "force-dynamic";
 
 interface ServicePageProps {
   params: { slug: string };
