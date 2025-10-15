@@ -116,7 +116,7 @@ export default function ApplicantProfileModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-10">
-      <div className="bg-white max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 rounded-lg relative">
+      <div className="bg-white max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 rounded-lg relative shadow-lg border border-gray-200">
         <button
           onClick={onClose}
           className="absolute top-3 right-3 text-gray-500 hover:text-black"
@@ -130,8 +130,8 @@ export default function ApplicantProfileModal({
           <p className="text-center text-red-500">Application not found.</p>
         ) : (
           <>
-            <h2 className="text-xl font-bold mb-4">Applicant Profile</h2>
-            <div className="space-y-2">
+            <h2 className="text-xl font-bold mb-4 text-gray-800">Applicant Profile</h2>
+            <div className="space-y-2 text-sm sm:text-base">
               <p><strong>Name:</strong> {application.name}</p>
               <p><strong>Email:</strong> {application.email}</p>
               <p><strong>Contact:</strong> {application.contactNumber}</p>
@@ -146,7 +146,7 @@ export default function ApplicantProfileModal({
                   onChange={(e) =>
                     handleStatusChange(e.target.value as Application["status"])
                   }
-                  className={`ml-2 px-3 py-1 rounded ${statusColors[application.status]}`}
+                  className={`ml-2 px-3 py-1 rounded ${statusColors[application.status]} focus:ring-2 focus:ring-blue-400 outline-none`}
                 >
                   {Object.keys(statusColors).map((s) => (
                     <option key={s} value={s}>
@@ -156,30 +156,45 @@ export default function ApplicantProfileModal({
                 </select>
               </div>
 
+              {/* ✅ Fixed resume viewer */}
               {application.resume && (
                 <div>
                   <strong>Resume:</strong>{" "}
-                  <a
-                    href={application.resume}
-                    target="_blank"
-                    className="text-blue-600 underline"
-                    rel="noreferrer"
-                  >
-                    View / Download
-                  </a>
+                  {(() => {
+                    const resumeUrl = application.resume;
+                    const isWordFile =
+                      resumeUrl.endsWith(".doc") || resumeUrl.endsWith(".docx");
+
+                    const viewUrl = isWordFile
+                      ? `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(resumeUrl)}`
+                      : resumeUrl;
+
+                    return (
+                      <a
+                        href={viewUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-blue-600 underline hover:text-blue-800"
+                      >
+                        View / Download
+                      </a>
+                    );
+                  })()}
                 </div>
               )}
 
               {application.coverLetter && (
                 <div>
                   <strong>Cover Letter:</strong>
-                  <p className="whitespace-pre-line">{application.coverLetter}</p>
+                  <p className="whitespace-pre-line bg-gray-50 p-2 rounded border border-gray-200">
+                    {application.coverLetter}
+                  </p>
                 </div>
               )}
 
               <button
                 onClick={handleDelete}
-                className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-all"
               >
                 Delete Application
               </button>
