@@ -81,10 +81,7 @@ export default function ApplicantProfileModal({
       if (data.success) {
         setApplication((prev) => (prev ? { ...prev, status } : prev));
         toast.success(`Status updated to ${status}`);
-
-        if (application && onUpdate) {
-          onUpdate({ ...application, status });
-        }
+        if (application && onUpdate) onUpdate({ ...application, status });
       } else toast.error(data.error || "Failed to update status");
     } catch (err) {
       console.error(err);
@@ -94,7 +91,6 @@ export default function ApplicantProfileModal({
 
   const handleDelete = async () => {
     if (!applicantId || !confirm("Are you sure you want to delete this application?")) return;
-
     try {
       const res = await fetch(`/api/adminjobs/fetchapplication/${applicantId}`, {
         method: "DELETE",
@@ -113,6 +109,30 @@ export default function ApplicantProfileModal({
   };
 
   if (!isOpen) return null;
+
+  // ================= Resume Helpers =================
+  const getResumeViewUrl = (resume: string) => {
+    let resumeUrl = resume.trim();
+    if (resumeUrl.startsWith("/uploads/") && process.env.NEXT_PUBLIC_BASE_URL) {
+      resumeUrl = `${process.env.NEXT_PUBLIC_BASE_URL}${resumeUrl}`;
+    }
+
+    const lowerUrl = resumeUrl.toLowerCase();
+    if (lowerUrl.endsWith(".doc") || lowerUrl.endsWith(".docx")) {
+      return `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(resumeUrl)}`;
+    }
+    if (lowerUrl.endsWith(".pdf")) {
+      return `https://docs.google.com/viewer?url=${encodeURIComponent(resumeUrl)}&embedded=true`;
+    }
+    return encodeURI(resumeUrl); // other files open directly
+  };
+
+  const getResumeDownloadUrl = (resume: string) => {
+    if (resume.startsWith("/uploads/") && process.env.NEXT_PUBLIC_BASE_URL) {
+      return `${process.env.NEXT_PUBLIC_BASE_URL}${resume}`;
+    }
+    return resume;
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-10">
@@ -149,37 +169,35 @@ export default function ApplicantProfileModal({
                   className={`ml-2 px-3 py-1 rounded ${statusColors[application.status]} focus:ring-2 focus:ring-blue-400 outline-none`}
                 >
                   {Object.keys(statusColors).map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
+                    <option key={s} value={s}>{s}</option>
                   ))}
                 </select>
               </div>
 
-              {/* ✅ Fixed resume viewer */}
+              {/* Resume Section */}
               {application.resume && (
-                <div>
-                  <strong>Resume:</strong>{" "}
-                  {(() => {
-                    const resumeUrl = application.resume;
-                    const isWordFile =
-                      resumeUrl.endsWith(".doc") || resumeUrl.endsWith(".docx");
+                <div className="mt-2">
+                  <strong>Resume:</strong>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 mt-1">
+                    {/* View / Preview */}
+                    <a
+                      href={getResumeViewUrl(application.resume)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-blue-600 underline hover:text-blue-800"
+                    >
+                      View
+                    </a>
 
-                    const viewUrl = isWordFile
-                      ? `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(resumeUrl)}`
-                      : resumeUrl;
-
-                    return (
-                      <a
-                        href={viewUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-blue-600 underline hover:text-blue-800"
-                      >
-                        View / Download
-                      </a>
-                    );
-                  })()}
+                    {/* Download */}
+                    <a
+                      href={getResumeDownloadUrl(application.resume)}
+                      download
+                      className="px-4 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-all"
+                    >
+                      Download
+                    </a>
+                  </div>
                 </div>
               )}
 
