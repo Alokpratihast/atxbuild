@@ -18,11 +18,14 @@ const seoSchema = z.object({
 export const GET = async () => {
   try {
     const seoList = await SEO.find();
+    // Return the array directly
     return NextResponse.json(seoList);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 };
+
+
 
 
 

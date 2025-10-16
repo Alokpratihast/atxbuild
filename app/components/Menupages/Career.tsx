@@ -112,9 +112,9 @@ export default function CareerPage() {
         <h1 className="text-4xl md:text-5xl font-extrabold text-gray-800 dark:text-white mb-4">
           Find Your <span className="text-blue-600">Dream Job</span>
         </h1>
-        <p className="text-gray-600 dark:text-gray-300 mb-8 max-w-2xl">
+        {/* <p className="text-gray-600 dark:text-gray-300 mb-8 max-w-2xl">
           Explore top companies and popular roles tailored for your skills.
-        </p>
+        </p> */}
 
         {/* SEARCH INPUTS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-4xl relative">

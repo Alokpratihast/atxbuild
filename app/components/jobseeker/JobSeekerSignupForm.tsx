@@ -92,11 +92,13 @@ export default function JobSeekerMultiStepForm() {
   // 🟢 Improved Submit Logic
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     try {
-      // ✅ Defensive payload construction
-      const resumeUrl = data.resume?.[0]?.uploadedUrl || "";
-      const coverLetterUrls = Array.isArray(data.coverLetter)
-        ? data.coverLetter.map((f) => f.uploadedUrl).filter(Boolean)
-        : [];
+        // ✅ Extract URLs safely
+    const resumeUrl = data.resume?.[0]?.uploadedUrl || "";
+    const coverLetterUrls = Array.isArray(data.coverLetter)
+      ? data.coverLetter
+          .map((f) => f.uploadedUrl)
+          .filter(Boolean)
+      : [];
 
       if (!resumeUrl) {
         alert("Please upload your resume before submitting.");

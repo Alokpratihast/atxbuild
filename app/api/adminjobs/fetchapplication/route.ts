@@ -49,6 +49,13 @@ export async function POST(req: Request) {
     const contactNumber = formData.get("contactNumber") as string;
     const coverLetter = formData.get("coverLetter") as string;
 
+    
+
+    // 🎯 Newly added
+    const resumeUrl = formData.get("resumeUrl") as string; // from ImageKit upload
+    const originalFileName = formData.get("originalFileName") as string; // actual file name
+
+
     // ⚡ Save application
     const application = await Application.create({
       jobId,
@@ -57,6 +64,9 @@ export async function POST(req: Request) {
       email,
       contactNumber,
       coverLetter,
+      
+      resume: resumeUrl, // store ImageKit URL
+      originalFileName,
     });
 
     return NextResponse.json({ success: true, application });

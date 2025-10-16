@@ -51,6 +51,22 @@ export async function POST(req: NextRequest) {
     // ✅ Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // 🧠 Extract uploaded URLs
+    const resumeUrl =
+      Array.isArray(resume) && resume[0]?.uploadedUrl
+        ? resume[0].uploadedUrl
+        : typeof resume === "string"
+        ? resume
+        : "";
+
+    const coverLetterUrl =
+      Array.isArray(coverLetter) && coverLetter[0]?.uploadedUrl
+        ? coverLetter[0].uploadedUrl
+        : typeof coverLetter === "string"
+        ? coverLetter
+        : "";
+
+
     // ✅ Save to DB
     const newJobSeeker = await JobSeeker.create({
       firstName,
@@ -80,6 +96,7 @@ export async function POST(req: NextRequest) {
         firstName: newJobSeeker.firstName,
         lastName: newJobSeeker.lastName,
         email: newJobSeeker.email,
+        resume: newJobSeeker.resume
       },
     });
   } catch (error) {

@@ -11,15 +11,23 @@ const SeoDashboard = () => {
   const [viewingSEO, setViewingSEO] = useState<SEOFormData | null>(null);
 
   // 1️⃣ Fetch all SEO entries
-  const fetchSEO = async () => {
-    try {
-      const res = await fetch("/api/seo");
-      const data = await res.json();
-      setSeoList(data);
-    } catch (err: any) {
-      toast.error("Failed to fetch SEO data");
-    }
-  };
+ const fetchSEO = async () => {
+  try {
+    const res = await fetch("/api/seo");
+    const data = await res.json();
+    console.log("SEO API response:", data);
+
+    if (!res.ok) throw new Error(data.error || "Failed to fetch SEO");
+
+    // Ensure only arrays are stored
+    setSeoList(Array.isArray(data) ? data : []);
+  } catch (err: any) {
+    console.error("Fetch SEO error:", err);
+    toast.error("Failed to fetch SEO data");
+    setSeoList([]); // Prevents .map() crash
+  }
+};
+
 
   useEffect(() => { fetchSEO(); }, []);
 
