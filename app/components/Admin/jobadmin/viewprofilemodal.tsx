@@ -24,6 +24,7 @@ interface Application {
   contactNumber: string;
   coverLetter?: string;
   resume?: string;
+  originalFileName?: string; // optional original filename
   status: "Pending" | "Interview" | "Rejected" | "Accepted";
   appliedAt: string;
 }
@@ -111,27 +112,11 @@ export default function ApplicantProfileModal({
   if (!isOpen) return null;
 
   // ================= Resume Helpers =================
-  const getResumeViewUrl = (resume: string) => {
-    let resumeUrl = resume.trim();
-    if (resumeUrl.startsWith("/uploads/") && process.env.NEXT_PUBLIC_BASE_URL) {
-      resumeUrl = `${process.env.NEXT_PUBLIC_BASE_URL}${resumeUrl}`;
-    }
-
-    const lowerUrl = resumeUrl.toLowerCase();
-    if (lowerUrl.endsWith(".doc") || lowerUrl.endsWith(".docx")) {
-      return `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(resumeUrl)}`;
-    }
-    if (lowerUrl.endsWith(".pdf")) {
-      return `https://docs.google.com/viewer?url=${encodeURIComponent(resumeUrl)}&embedded=true`;
-    }
-    return encodeURI(resumeUrl); // other files open directly
-  };
-
   const getResumeDownloadUrl = (resume: string) => {
     if (resume.startsWith("/uploads/") && process.env.NEXT_PUBLIC_BASE_URL) {
       return `${process.env.NEXT_PUBLIC_BASE_URL}${resume}`;
     }
-    return resume;
+    return resume; // ImageKit URLs
   };
 
   return (
@@ -179,20 +164,9 @@ export default function ApplicantProfileModal({
                 <div className="mt-2">
                   <strong>Resume:</strong>
                   <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 mt-1">
-                    {/* View / Preview */}
-                    <a
-                      href={getResumeViewUrl(application.resume)}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-blue-600 underline hover:text-blue-800"
-                    >
-                      View
-                    </a>
-
-                    {/* Download */}
                     <a
                       href={getResumeDownloadUrl(application.resume)}
-                      download
+                      download={application.originalFileName || "resume.pdf"}
                       className="px-4 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-all"
                     >
                       Download
