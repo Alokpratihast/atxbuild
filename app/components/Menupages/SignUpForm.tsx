@@ -4,12 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthModal } from "@/store/useAuthModal";
 import { signIn } from "next-auth/react";
+import { FiEye, FiEyeOff } from "react-icons/fi";
 
 export default function AdminLoginPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ email: "", password: "" });
+  const [showPassword, setShowPassword] = useState(false);
   const { closeModal } = useAuthModal();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -21,7 +23,6 @@ export default function AdminLoginPage() {
     setLoading(true);
     setError(null);
 
-    // Frontend validation
     if (!formData.email || !formData.password) {
       setError("Please fill all required fields");
       setLoading(false);
@@ -60,6 +61,7 @@ export default function AdminLoginPage() {
       <h2 className="text-3xl font-bold text-center mb-6">Admin Login</h2>
 
       <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Email */}
         <div className="flex flex-col">
           <label className="mb-1 text-gray-600 font-medium">Email</label>
           <input
@@ -71,20 +73,35 @@ export default function AdminLoginPage() {
           />
         </div>
 
-        <div className="flex flex-col">
+        {/* Password */}
+        <div className="flex flex-col relative">
           <label className="mb-1 text-gray-600 font-medium">Password</label>
           <input
-            type="password"
+            type={showPassword ? "text" : "password"}
             name="password"
             value={formData.password}
             onChange={handleChange}
             placeholder="********"
-            className="border rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="border rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
           />
+
+          {/* Show eye icon only if user typed something */}
+          {formData.password && (
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-black"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
+            </button>
+          )}
         </div>
 
+        {/* Error */}
         {error && <p className="text-red-600 text-center">{error}</p>}
 
+        {/* Submit */}
         <button
           type="submit"
           disabled={loading}
