@@ -101,6 +101,7 @@ export default async function BlogDetailPage({ params }: BlogPageProps) {
           alt={blog.title}
           fill
           className="object-cover"
+          unoptimized
         />
       </div>
 
