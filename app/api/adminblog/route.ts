@@ -6,6 +6,7 @@ import BlogSEO from "@/models/adminblog/blogseo";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
+// ----------------- Zod Schemas -----------------
 const seoSchema = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
@@ -30,15 +31,15 @@ const blogSchema = z.object({
   seo: seoSchema.optional(),
 });
 
-
-// ---------------- Auth Helper ----------------
+// ----------------- Helpers -----------------
 async function requireAdmin(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  console.log("Session:", session);
-  if (!session || (session.user.role !== "admin" && session.user.role !== "superadmin")) return null;
+  if (!session || (session.user.role !== "admin" && session.user.role !== "superadmin")) {
+    return null;
+  }
   return session;
 }
-// ---------------- Slug Helper ----------------
+
 async function generateUniqueSlug(titleOrSlug: string, blogId?: string) {
   let slug = titleOrSlug.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^\w-]+/g, "");
   const originalSlug = slug;
@@ -48,93 +49,95 @@ async function generateUniqueSlug(titleOrSlug: string, blogId?: string) {
     slug = `${originalSlug}-${counter}`;
     counter++;
   }
-
   return slug;
 }
-// POST: Create Blog + SEO
-export const POST = async (req: NextRequest) => {
-  try {
-    await connectedToDatabase();
-    const session = await requireAdmin(req);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
+// ----------------- POST: Create Blog + SEO -----------------
+export const POST = async (req: NextRequest) => {
+  await connectedToDatabase();
+  const session = await requireAdmin(req);
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+
+  try {
     const body = await req.json();
     const validated = blogSchema.parse(body);
-
-    // Generate unique slug
     const slug = await generateUniqueSlug(validated.slug || validated.title);
-
-
-    // Separate SEO
     const { seo, ...blogData } = validated;
+
+    // Parse structuredData safely
     let seoData = seo;
-if (seo?.structuredData && typeof seo.structuredData === "string") {
-  try {
-    seoData = { ...seo, structuredData: JSON.parse(seo.structuredData) };
-  } catch {
-    return NextResponse.json({ error: "SEO structuredData must be valid JSON" }, { status: 422 });
-  }
-}
-
-
-    // Create blog
-    const blog = await Blog.create({ ...blogData, slug, author: blogData.author || session.user.id });
-
-    // Create SEO if provided
-    if (seo) {
-      const blogSEO = await BlogSEO.create({ blog: blog._id, ...seo });
-      blog.seo = blogSEO._id;
-      await blog.save();
+    if (seo?.structuredData && typeof seo.structuredData === "string") {
+      try {
+        seoData = { ...seo, structuredData: JSON.parse(seo.structuredData) };
+      } catch {
+        return NextResponse.json({ error: "SEO structuredData must be valid JSON" }, { status: 422 });
+      }
     }
 
-    // Populate SEO and author
-    const populatedBlog = await Blog.findById(blog._id).populate("seo").populate("author");
+    // ----------------- Transaction -----------------
+    const sessionDB = await Blog.startSession();
+    sessionDB.startTransaction();
 
-    return NextResponse.json(populatedBlog, { status: 201 });
+    try {
+      // Create blog
+      const blog = await Blog.create([{ ...blogData, slug, author: blogData.author || session.user.id }], { session: sessionDB });
+      
+      // Create SEO if provided
+      if (seo) {
+        const blogSEO = await BlogSEO.create([{ blog: blog[0]._id, ...seoData }], { session: sessionDB });
+        blog[0].seo = blogSEO[0]._id;
+        await blog[0].save({ session: sessionDB });
+      }
+
+      await sessionDB.commitTransaction();
+      sessionDB.endSession();
+
+      // Populate SEO and author
+      const populatedBlog = await Blog.findById(blog[0]._id).populate("seo").populate("author");
+      return NextResponse.json(populatedBlog, { status: 201 });
+
+    } catch (err) {
+      await sessionDB.abortTransaction();
+      sessionDB.endSession();
+      throw err;
+    }
 
   } catch (err: any) {
-    console.error("POST /api/adminblog error:", err);
     if (err instanceof ZodError) return NextResponse.json({ errors: err.issues }, { status: 422 });
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 };
 
-// GET: List Blogs
+// ----------------- GET: Cursor-Based Pagination -----------------
 export const GET = async (req: NextRequest) => {
+  await connectedToDatabase();
   try {
-    await connectedToDatabase();
-
     const { searchParams } = new URL(req.url);
     const filter: any = {};
 
-    // Existing filters
     if (searchParams.get("status")) filter.status = searchParams.get("status");
     if (searchParams.get("category")) filter.category = searchParams.get("category");
     if (searchParams.get("search"))
       filter.title = { $regex: searchParams.get("search"), $options: "i" };
-
-    // New tag filter
-    if (searchParams.get("tag")) {
+    if (searchParams.get("tag"))
       filter.tags = { $in: searchParams.get("tag")!.split(",") };
-    }
 
-    // Pagination
-    const page = parseInt(searchParams.get("page") || "1", 10);
-    const limit = parseInt(searchParams.get("limit") || "5", 10);
-    const total = await Blog.countDocuments(filter);
-    const totalPages = Math.ceil(total / limit);
+    const limit = Math.min(parseInt(searchParams.get("limit") || "10", 10), 50); // max 50
+    const cursor = searchParams.get("cursor"); // expects ObjectId string
+
+    if (cursor) filter._id = { $lt: cursor }; // cursor-based pagination
 
     const blogs = await Blog.find(filter)
       .populate("seo")
       .populate("author")
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
+      .sort({ _id: -1 })
       .limit(limit);
 
-    return NextResponse.json({ blogs, totalPages });
+    const nextCursor = blogs.length > 0 ? blogs[blogs.length - 1]._id : null;
+
+    return NextResponse.json({ blogs, nextCursor }, { status: 200 });
 
   } catch (err: any) {
-    console.error("GET /api/adminblog error:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 };

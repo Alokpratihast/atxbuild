@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { toast } from "react-hot-toast";
 import BlogFormModal from "@/components/Admin/adminblog/BlogFormModal";
-import Select from "react-select/creatable";
+import CreatableSelect from "react-select/creatable";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 
 interface Blog {
@@ -18,11 +18,14 @@ interface Blog {
   createdAt: string;
 }
 
+interface OptionType {
+  label: string;
+  value: string;
+}
+
 export default function BlogsDashboardPage() {
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [editingBlogId, setEditingBlogId] = useState<string | null>(null);
   const [formCollapsed, setFormCollapsed] = useState(true);
 
@@ -35,12 +38,24 @@ export default function BlogsDashboardPage() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const [selectedBlogs, setSelectedBlogs] = useState<string[]>([]);
+  const [tagsOptions, setTagsOptions] = useState<OptionType[]>([]);
 
-  const searchTimeout = useRef<NodeJS.Timeout | null>(null);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const limit = 5;
+  const searchTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  // ------------------- Fetch Tags -------------------
+  useEffect(() => {
+    fetch("/api/admintag")
+      .then((res) => res.json())
+      .then((data) =>
+        setTagsOptions(data.map((t: any) => ({ label: t.name, value: t.name })))
+      )
+      .catch(() => setTagsOptions([]));
+  }, []);
 
   // ------------------- Fetch Blogs -------------------
-  const fetchBlogs = async () => {
+  const fetchBlogs = async (resetCursor = false) => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -48,17 +63,21 @@ export default function BlogsDashboardPage() {
       if (statusFilter) params.append("status", statusFilter);
       if (categoryFilter) params.append("category", categoryFilter);
       if (tagFilter) params.append("tag", tagFilter);
-      params.append("page", page.toString());
       params.append("limit", limit.toString());
+      if (!resetCursor && nextCursor) params.append("cursor", nextCursor);
       params.append("sortField", sortField);
       params.append("sortOrder", sortOrder);
 
-      const res = await fetch(`/api/adminblog?${params.toString()}`);
+      const res = await fetch(`/api/adminblog/frontendfetchblogs?${params.toString()}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to fetch blogs");
 
-      setBlogs(data.blogs);
-      setTotalPages(data.totalPages);
+      if (resetCursor) {
+        setBlogs(data.blogs);
+      } else {
+        setBlogs((prev) => [...prev, ...data.blogs]);
+      }
+      setNextCursor(data.nextCursor);
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -66,20 +85,19 @@ export default function BlogsDashboardPage() {
     }
   };
 
+  // ------------------- Debounced Search -------------------
   useEffect(() => {
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    searchTimeout.current = setTimeout(() => {
-      setPage(1);
-      fetchBlogs();
-    }, 500);
+    searchTimeout.current = setTimeout(() => fetchBlogs(true), 500);
     return () => {
       if (searchTimeout.current) clearTimeout(searchTimeout.current);
     };
   }, [search]);
 
+  // ------------------- Filters & Sorting -------------------
   useEffect(() => {
-    fetchBlogs();
-  }, [statusFilter, categoryFilter, tagFilter, page, sortField, sortOrder]);
+    fetchBlogs(true);
+  }, [statusFilter, categoryFilter, tagFilter, sortField, sortOrder]);
 
   // ------------------- Actions -------------------
   const handleDelete = async (id: string) => {
@@ -89,7 +107,7 @@ export default function BlogsDashboardPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to delete blog");
       toast.success("Blog deleted successfully");
-      fetchBlogs();
+      setBlogs((prev) => prev.filter((b) => b._id !== id));
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -106,15 +124,21 @@ export default function BlogsDashboardPage() {
       });
       toast.success("Blogs deleted successfully");
       setSelectedBlogs([]);
-      fetchBlogs();
-    } catch (err: any) {
+      fetchBlogs(true);
+    } catch {
       toast.error("Failed to delete blogs");
     }
   };
 
-  const handlePageChange = (newPage: number) => {
-    if (newPage < 1 || newPage > totalPages) return;
-    setPage(newPage);
+  const toggleSelectBlog = (id: string) => {
+    setSelectedBlogs((prev) =>
+      prev.includes(id) ? prev.filter((b) => b !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedBlogs.length === blogs.length) setSelectedBlogs([]);
+    else setSelectedBlogs(blogs.map((b) => b._id));
   };
 
   const handleEditClick = (id: string) => {
@@ -132,6 +156,7 @@ export default function BlogsDashboardPage() {
     }
   };
 
+  // ------------------- Drag & Drop Reordering -------------------
   const onDragEnd = async (result: any) => {
     if (!result.destination) return;
     const items = Array.from(blogs);
@@ -146,36 +171,26 @@ export default function BlogsDashboardPage() {
         body: JSON.stringify(items.map((b) => b._id)),
       });
       toast.success("Order saved!");
-    } catch (err: any) {
+    } catch {
       toast.error("Failed to save order");
     }
   };
 
+  // ------------------- Tag Update -------------------
   const handleTagChange = async (blogId: string, tags: string[]) => {
+    setBlogs((prev) =>
+      prev.map((b) => (b._id === blogId ? { ...b, tags } : b))
+    ); // optimistic
     try {
       await fetch(`/api/adminblog/${blogId}/tags`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tags }),
       });
-      setBlogs((prev) =>
-        prev.map((b) => (b._id === blogId ? { ...b, tags } : b))
-      );
       toast.success("Tags updated!");
-    } catch (err: any) {
+    } catch {
       toast.error("Failed to update tags");
     }
-  };
-
-  const toggleSelectBlog = (id: string) => {
-    setSelectedBlogs((prev) =>
-      prev.includes(id) ? prev.filter((b) => b !== id) : [...prev, id]
-    );
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedBlogs.length === blogs.length) setSelectedBlogs([]);
-    else setSelectedBlogs(blogs.map((b) => b._id));
   };
 
   // ------------------- Render -------------------
@@ -218,10 +233,7 @@ export default function BlogsDashboardPage() {
               />
               <select
                 value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value);
-                  setPage(1);
-                }}
+                onChange={(e) => setStatusFilter(e.target.value)}
                 className="border rounded p-2"
               >
                 <option value="">All Status</option>
@@ -232,20 +244,14 @@ export default function BlogsDashboardPage() {
                 type="text"
                 placeholder="Category"
                 value={categoryFilter}
-                onChange={(e) => {
-                  setCategoryFilter(e.target.value);
-                  setPage(1);
-                }}
+                onChange={(e) => setCategoryFilter(e.target.value)}
                 className="border rounded p-2"
               />
               <input
                 type="text"
                 placeholder="Tag"
                 value={tagFilter}
-                onChange={(e) => {
-                  setTagFilter(e.target.value);
-                  setPage(1);
-                }}
+                onChange={(e) => setTagFilter(e.target.value)}
                 className="border rounded p-2"
               />
             </div>
@@ -307,13 +313,20 @@ export default function BlogsDashboardPage() {
                                 <td className="p-2 border">{blog.title}</td>
                                 <td className="p-2 border">{blog.category || "-"}</td>
                                 <td className="p-2 border w-48">
-                                  <Select
+                                  <CreatableSelect
                                     isMulti
-                                    options={[]} // populate dynamically
+                                    options={tagsOptions}
                                     value={blog.tags?.map((t) => ({ label: t, value: t }))}
                                     onChange={(vals) =>
                                       handleTagChange(blog._id, vals.map((v) => v.value))
                                     }
+                                    onCreateOption={(inputValue) => {
+                                      const newTag = { label: inputValue, value: inputValue };
+                                      setTagsOptions((prev) => [...prev, newTag]);
+                                      handleTagChange(blog._id, [...(blog.tags || []), inputValue]);
+                                    }}
+                                    menuPortalTarget={document.body}
+                                    styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
                                   />
                                 </td>
                                 <td className="p-2 border">{blog.status}</td>
@@ -344,33 +357,14 @@ export default function BlogsDashboardPage() {
               </DragDropContext>
             )}
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex justify-center items-center mt-4 space-x-2">
+            {/* Load More */}
+            {nextCursor && !loading && (
+              <div className="flex justify-center mt-4">
                 <button
-                  onClick={() => handlePageChange(page - 1)}
-                  disabled={page === 1}
-                  className="px-3 py-1 bg-gray-300 rounded disabled:opacity-50"
+                  onClick={() => fetchBlogs()}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
                 >
-                  Prev
-                </button>
-                {[...Array(totalPages)].map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handlePageChange(i + 1)}
-                    className={`px-3 py-1 rounded ${
-                      page === i + 1 ? "bg-blue-600 text-white" : "bg-gray-200"
-                    }`}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
-                <button
-                  onClick={() => handlePageChange(page + 1)}
-                  disabled={page === totalPages}
-                  className="px-3 py-1 bg-gray-300 rounded disabled:opacity-50"
-                >
-                  Next
+                  Load More
                 </button>
               </div>
             )}
@@ -390,7 +384,7 @@ export default function BlogsDashboardPage() {
                   blogId={editingBlogId || undefined}
                   onSuccess={() => {
                     setEditingBlogId(null);
-                    fetchBlogs();
+                    fetchBlogs(true);
                     setFormCollapsed(true);
                   }}
                 />

@@ -4,10 +4,15 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "randomuser.me",
+        hostname: "ik.imagekit.io",
         port: "",
-        pathname: "/api/portraits/**",
+        pathname: "/**", // <-- allow all paths from ImageKit
       },
+      {
+    protocol: "https",
+    hostname: "images.unsplash.com",
+    pathname: "/**",
+  },
     ],
   },
 };

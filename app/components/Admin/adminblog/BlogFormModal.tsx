@@ -1,7 +1,7 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
-import dynamic from "next/dynamic";
 import { toast } from "react-hot-toast";
 import { z } from "zod";
 import { useForm, Controller } from "react-hook-form";
@@ -13,16 +13,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/Admin/adminblog/ui/Input";
 import { Label } from "@/components/Admin/adminblog/ui/Label";
 import { Textarea } from "@/components/Admin/adminblog/ui/Textarea";
-import "react-quill/dist/quill.snow.css";
-
-const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
-
 
 // ---------------- Validation Schema ----------------
 const BlogSchema = z.object({
   title: z.string().min(3, "Title is required"),
   content: z.string().min(10, "Content is required"),
-  category: z.string().min(1, "Category is required"),
+  category: z.string().optional(),
   excerpt: z.string().optional(),
   coverImage: z.string().url("Must be a valid URL").optional(),
   status: z.enum(["draft", "published"]),
@@ -59,6 +55,7 @@ export default function BlogFormModal({ blogId, onSuccess }: BlogFormModalProps)
     handleSubmit,
     reset,
     control,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<BlogFormData>({
     resolver: zodResolver(BlogSchema),
@@ -109,58 +106,16 @@ export default function BlogFormModal({ blogId, onSuccess }: BlogFormModalProps)
             keywords: data.seo?.keywords || [],
             canonical: data.seo?.canonical || "",
             robots: data.seo?.robots || "",
-            structuredData: JSON.stringify(data.seo?.structuredData || "", null, 2),
+            structuredData:
+              data.seo?.structuredData && typeof data.seo.structuredData === "object"
+                ? JSON.stringify(data.seo.structuredData, null, 2)
+                : data.seo?.structuredData || "",
           },
         });
       })
       .catch(() => toast.error("Failed to load blog for editing!"))
       .finally(() => setLoading(false));
   }, [blogId, reset]);
-
-  // ---------------- ReactQuill Image Upload Handler ----------------
-  const imageHandler = () => {
-    const input = document.createElement("input");
-    input.setAttribute("type", "file");
-    input.setAttribute("accept", "image/*");
-    input.click();
-
-    input.onchange = async () => {
-      const file = input.files ? input.files[0] : null;
-      if (!file) return;
-
-      const formData = new FormData();
-      formData.append("file", file);
-
-      try {
-        const res = await fetch("/api/adminblog/upload-blogimg", { method: "POST", body: formData });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Upload failed");
-
-        const quill = (document.querySelector(".ql-editor") as any).__quill;
-        const range = quill.getSelection(true);
-        quill.insertEmbed(range.index, "image", data.url);
-        quill.setSelection(range.index + 1);
-      } catch (err: any) {
-        console.error(err);
-        toast.error(err.message || "Image upload failed");
-      }
-    };
-  };
-
-  const modules = {
-    toolbar: {
-      container: [
-        [{ header: [1, 2, 3, false] }],
-        ["bold", "italic", "underline", "strike"],
-        [{ list: "ordered" }, { list: "bullet" }],
-        ["link", "image"],
-        ["clean"],
-      ],
-      handlers: { image: imageHandler },
-    },
-  };
-
-  const selectMenuStyles = { menuPortal: (base: any) => ({ ...base, zIndex: 9999 }) };
 
   // ---------------- Submit Handler ----------------
   const onSubmit = async (data: BlogFormData) => {
@@ -172,6 +127,8 @@ export default function BlogFormModal({ blogId, onSuccess }: BlogFormModalProps)
           toast.error("Structured Data must be valid JSON");
           return;
         }
+      } else {
+        delete data.seo.structuredData;
       }
 
       const method = blogId ? "PUT" : "POST";
@@ -196,7 +153,8 @@ export default function BlogFormModal({ blogId, onSuccess }: BlogFormModalProps)
 
   if (loading) return <p>Loading blog data...</p>;
 
-  // ---------------- Render ----------------
+  const selectMenuStyles = { menuPortal: (base: any) => ({ ...base, zIndex: 9999 }) };
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 bg-white p-6 rounded-xl shadow-md border">
       {/* Title */}
@@ -212,16 +170,14 @@ export default function BlogFormModal({ blogId, onSuccess }: BlogFormModalProps)
         <Controller
           name="content"
           control={control}
-          render={({ field }) => (
-            <ReactQuill theme="snow" value={field.value} onChange={field.onChange} modules={modules} />
-          )}
+          render={({ field }) => <Textarea {...field} rows={6} placeholder="Enter blog content" />}
         />
         {errors.content && <p className="text-red-500 text-sm">{errors.content.message}</p>}
       </div>
 
       {/* Category */}
       <div>
-        <Label>Category *</Label>
+        <Label>Category</Label>
         <Controller
           name="category"
           control={control}
@@ -242,7 +198,6 @@ export default function BlogFormModal({ blogId, onSuccess }: BlogFormModalProps)
             />
           )}
         />
-        {errors.category && <p className="text-red-500 text-sm">{errors.category.message}</p>}
       </div>
 
       {/* Tags */}
@@ -280,6 +235,35 @@ export default function BlogFormModal({ blogId, onSuccess }: BlogFormModalProps)
       <div>
         <Label>Cover Image URL</Label>
         <Input {...register("coverImage")} placeholder="https://example.com/image.jpg" />
+      </div>
+
+      {/* Upload Image From System */}
+      <div>
+        <Label>Or Upload Image</Label>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={async e => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append("file", file);
+
+            try {
+              const res = await fetch("/api/adminblog/upload-blogimg", { method: "POST", body: formData });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error || "Upload failed");
+
+              reset(prev => ({ ...prev, coverImage: data.url }));
+              toast.success("Image uploaded successfully!");
+            } catch (err: any) {
+              console.error(err);
+              toast.error(err.message || "Image upload failed");
+            }
+          }}
+        />
+        {watch("coverImage") && <img src={watch("coverImage")} alt="Cover Preview" className="mt-2 w-40 h-40 object-cover rounded" />}
       </div>
 
       {/* Status */}

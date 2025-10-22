@@ -11,7 +11,7 @@ const imagekit = new ImageKit({
 });
 
 const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "webp", "gif"];
-const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_SIZE = 20 * 1024 * 1024; // 5MB
 
 export async function POST(req: Request) {
   try {
