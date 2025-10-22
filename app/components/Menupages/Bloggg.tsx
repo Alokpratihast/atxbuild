@@ -97,7 +97,7 @@ export default function BlogPage() {
     <div className="bg-gray-50 min-h-screen">
       {/* Header */}
       <div className="relative w-full h-[500px] overflow-hidden rounded-b-3xl text-white text-center">
-        <Image src="/blog/blogheader.jpg" alt="Blog Header" fill className="object-cover object-center brightness-75" priority />
+        <Image src="/blog/blogheader.jpg" alt="Blog Header" fill className="object-cover object-center brightness-75" priority unoptimized />
         <div className="relative z-10 flex flex-col items-center justify-center h-full px-6">
           <h1 className="text-5xl font-extrabold mb-4">Our Blog</h1>
           <p className="text-lg opacity-90">Discover insights, trends, and strategies on technology, business, design, and more.</p>
@@ -123,7 +123,7 @@ export default function BlogPage() {
           <Link key={blog._id} href={`/blog/${blog.slug}`}>
             <div className="group bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-2xl transition-all cursor-pointer">
               <div className="relative w-full h-56 overflow-hidden">
-                <Image src={blog.coverImage || "/blog/default.jpg"} alt={blog.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
+                <Image src={blog.coverImage || "/blog/default.jpg"} alt={blog.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" unoptimized />
               </div>
               <div className="p-6">
                 <h2 className="text-2xl font-bold mb-3 group-hover:text-blue-600 transition">{blog.title}</h2>
