@@ -145,3 +145,19 @@ export const DELETE = async (req: NextRequest, { params }: { params: { id: strin
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 };
+
+export const GET = async (req: NextRequest, { params }: { params: { id: string } }) => {
+  await connectedToDatabase();
+  try {
+    const blog = await Blog.findById(params.id)
+      .populate("seo")
+      .populate("author")
+      .lean();
+
+    if (!blog) return NextResponse.json({ error: "Blog not found" }, { status: 404 });
+
+    return NextResponse.json(blog);
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+};
