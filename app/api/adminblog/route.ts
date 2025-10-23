@@ -115,18 +115,33 @@ export const GET = async (req: NextRequest) => {
     const { searchParams } = new URL(req.url);
     const filter: any = {};
 
+    // Status filter (exact match)
     if (searchParams.get("status")) filter.status = searchParams.get("status");
-    if (searchParams.get("category")) filter.category = searchParams.get("category");
-    if (searchParams.get("search"))
+
+    // Category filter (case-insensitive)
+    if (searchParams.get("category")) {
+      filter.category = { $regex: searchParams.get("category"), $options: "i" };
+
+    }
+
+    // Title search (partial match)
+    if (searchParams.get("search")) {
       filter.title = { $regex: searchParams.get("search"), $options: "i" };
-    if (searchParams.get("tag"))
-      filter.tags = { $in: searchParams.get("tag")!.split(",") };
+    }
 
-    const limit = Math.min(parseInt(searchParams.get("limit") || "10", 10), 50); // max 50
-    const cursor = searchParams.get("cursor"); // expects ObjectId string
+    // Tag filter (matches any tag in the array)
+    if (searchParams.get("tag")) {
+      const tags = searchParams.get("tag")!.split(",").map(t => t.trim());
+      filter.tags = { $in: tags.map(t => new RegExp(t, "i")) };
 
+    }
+
+    // Pagination
+    const limit = Math.min(parseInt(searchParams.get("limit") || "10", 10), 50);
+    const cursor = searchParams.get("cursor");
     if (cursor) filter._id = { $lt: cursor }; // cursor-based pagination
 
+    // Fetch blogs
     const blogs = await Blog.find(filter)
       .populate("seo")
       .populate("author")

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import SEO from "@/models/seo-model";
+import SEO from "@/models/adminblog/blogseo";
 import { z, ZodError } from "zod";
 
 const seoSchema = z.object({

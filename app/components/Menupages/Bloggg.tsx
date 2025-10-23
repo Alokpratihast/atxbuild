@@ -4,7 +4,7 @@
 
 import useSWR, { SWRConfig } from "swr";
 import useSWRInfinite from "swr/infinite";
-import Select from "react-select";
+import CreatableSelect from "react-select/creatable";
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -25,33 +25,54 @@ interface Option {
   label: string;
 }
 
-const fetcher = (url: string) => fetch(url).then(res => res.json());
+// const fetcher = (url: string) => fetch(url).then(res => res.json());
+const fetcher = async (url: string) => {
+  const baseUrl =
+    typeof window === "undefined"
+      ? process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
+      : window.location.origin;
+
+  const fullUrl = url.startsWith("http") ? url : `${baseUrl}${url}`;
+  const res = await fetch(fullUrl);
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to fetch: ${res.status} - ${text}`);
+  }
+
+  return res.json();
+};
+
+
 
 export default function BlogPage() {
-  // Filters via SWR
+  // -------------------- Filter Data --------------------
   const { data: filterData, error: filterError } = useSWR(
-    "/api/adminblog/frontendfetchblog/filterblog",
+    "/api/adminblog/frontendfetchblogs/filterblog",
     fetcher
   );
+  console.log("Filter Data:", filterData);
 
-  const categories: Option[] = filterData?.categories?.map((c: string) => ({ value: c, label: c })) || [];
-  const tags: Option[] = filterData?.tags?.map((t: string) => ({ value: t, label: t })) || [];
+  const initialCategories: Option[] = filterData?.categories?.map((c: string) => ({ value: c, label: c })) || [];
+  const initialTags: Option[] = filterData?.tags?.map((t: string) => ({ value: t, label: t })) || [];
 
-  // Filter states
+  // -------------------- Filter States --------------------
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState(search);
   const [categoryFilter, setCategoryFilter] = useState<Option[]>([]);
   const [tagFilter, setTagFilter] = useState<Option[]>([]);
+  const [categories, setCategories] = useState<Option[]>(initialCategories);
+  const [tags, setTags] = useState<Option[]>(initialTags);
 
-  // Debounce search
+  // -------------------- Debounce Search --------------------
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearch(search), 500);
     return () => clearTimeout(handler);
   }, [search]);
 
-  // SWR Infinite for blogs
+  // -------------------- SWR Infinite Blogs --------------------
   const getKey = (pageIndex: number, previousPageData: any) => {
-    if (previousPageData && !previousPageData.hasNextPage) return null; // reached the end
+    if (previousPageData && !previousPageData.hasNextPage) return null; // end reached
 
     const params = new URLSearchParams();
     params.set("limit", "6");
@@ -64,20 +85,22 @@ export default function BlogPage() {
   };
 
   const { data, error, size, setSize, isValidating } = useSWRInfinite(getKey, fetcher);
-
   const blogs = data ? data.flatMap(page => page.blogs as BlogFrontend[]) : [];
   const hasNextPage = data ? data[data.length - 1].hasNextPage : true;
 
-  // Infinite scroll
+  // -------------------- Infinite Scroll --------------------
   const observer = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
-  const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
-    const target = entries[0];
-    if (target.isIntersecting && hasNextPage && !isValidating) {
-      setSize(size + 1);
-    }
-  }, [hasNextPage, isValidating, setSize, size]);
+  const handleObserver = useCallback(
+    (entries: IntersectionObserverEntry[]) => {
+      const target = entries[0];
+      if (target.isIntersecting && hasNextPage && !isValidating) {
+        setSize(size + 1);
+      }
+    },
+    [hasNextPage, isValidating, setSize, size]
+  );
 
   useEffect(() => {
     if (observer.current) observer.current.disconnect();
@@ -86,9 +109,9 @@ export default function BlogPage() {
     return () => observer.current?.disconnect();
   }, [handleObserver]);
 
-  // Reset when filters/search change
+  // -------------------- Live Filter Effect --------------------
   useEffect(() => {
-    setSize(1);
+    setSize(1); // reset to first page whenever filters/search change
   }, [debouncedSearch, categoryFilter, tagFilter, setSize]);
 
   if (filterError) console.error("Failed to load filters:", filterError);
@@ -106,12 +129,42 @@ export default function BlogPage() {
 
       {/* Filters */}
       <div className="max-w-7xl mx-auto px-6 py-6 flex flex-wrap gap-4">
-        <input type="text" placeholder="Search by title..." value={search} onChange={e => setSearch(e.target.value)} className="border p-2 rounded flex-1 min-w-[200px]" />
+        <input
+          type="text"
+          placeholder="Search by title..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="border p-2 rounded flex-1 min-w-[200px]"
+        />
+
         <div className="w-64">
-          <Select isMulti options={categories} value={categoryFilter} onChange={selected => setCategoryFilter(selected as Option[])} placeholder="Filter by Categories" />
+          <CreatableSelect
+            isMulti
+            options={categories}
+            value={categoryFilter}
+            onChange={selected => setCategoryFilter(selected as Option[])}
+            onCreateOption={(inputValue) => {
+              const newOption = { value: inputValue, label: inputValue };
+              setCategories(prev => [...prev, newOption]);
+              setCategoryFilter(prev => [...prev, newOption]);
+            }}
+            placeholder="Filter by Categories"
+          />
         </div>
+
         <div className="w-64">
-          <Select isMulti options={tags} value={tagFilter} onChange={selected => setTagFilter(selected as Option[])} placeholder="Filter by Tags" />
+          <CreatableSelect
+            isMulti
+            options={tags}
+            value={tagFilter}
+            onChange={selected => setTagFilter(selected as Option[])}
+            onCreateOption={(inputValue) => {
+              const newOption = { value: inputValue, label: inputValue };
+              setTags(prev => [...prev, newOption]);
+              setTagFilter(prev => [...prev, newOption]);
+            }}
+            placeholder="Filter by Tags"
+          />
         </div>
       </div>
 
@@ -148,4 +201,3 @@ export default function BlogPage() {
     </div>
   );
 }
-

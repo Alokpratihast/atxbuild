@@ -1,3 +1,5 @@
+
+
 // app/blog/[slug]/page.tsx
 import { connectedToDatabase } from "@/lib/db";
 import Blog from "@/models/adminblog/Blog";
@@ -7,12 +9,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import mongoose from "mongoose";
+import DOMPurify from "isomorphic-dompurify";
 
 interface BlogPageProps {
   params: { slug: string };
 }
 
-// TypeScript-friendly blog type
 type BlogFrontend = {
   _id: mongoose.Types.ObjectId | string;
   title: string;
@@ -39,7 +41,7 @@ async function getBlogBySlug(slug: string): Promise<BlogFrontend | null> {
 
   const blog = await Blog.findOne({ slug, status: "published" })
     .populate("author", "name")
-    .populate("seo", "title description ogImage") // BlogSEO
+    .populate("seo", "title description ogImage")
     .lean<BlogFrontend>();
 
   return blog || null;
@@ -50,20 +52,22 @@ export async function generateMetadata({ params }: BlogPageProps): Promise<Metad
   const blog = await getBlogBySlug(params.slug);
   if (!blog) return { title: "Blog Not Found" };
 
+  const defaultOG = "/blog/default-og.jpg";
+
   return {
     title: blog.seo?.title || blog.title,
     description: blog.seo?.description || blog.excerpt || truncate(blog.content || "", 160),
     openGraph: {
       title: blog.seo?.title || blog.title,
       description: blog.seo?.description || blog.excerpt || truncate(blog.content || "", 160),
-      images: blog.seo?.ogImage ? [{ url: blog.seo.ogImage }] : [],
+      images: [{ url: blog.seo?.ogImage || defaultOG }],
       type: "article",
     },
     twitter: {
       card: "summary_large_image",
       title: blog.seo?.title || blog.title,
       description: blog.seo?.description || blog.excerpt || truncate(blog.content || "", 160),
-      images: blog.seo?.ogImage ? [blog.seo.ogImage] : [],
+      images: [blog.seo?.ogImage || defaultOG],
     },
   };
 }
@@ -73,9 +77,7 @@ export default async function BlogDetailPage({ params }: BlogPageProps) {
   const blog = await getBlogBySlug(params.slug);
   if (!blog) return notFound();
 
-  await connectedToDatabase();
-
-  // Prev/Next blogs using _id for cursor-style performance
+  // Prev/Next blogs
   const [prevBlog, nextBlog] = await Promise.all([
     Blog.findOne({ _id: { $lt: blog._id }, status: "published" })
       .sort({ _id: -1 })
@@ -84,6 +86,8 @@ export default async function BlogDetailPage({ params }: BlogPageProps) {
       .sort({ _id: 1 })
       .lean<BlogFrontend>(),
   ]);
+
+  const sanitizedContent = DOMPurify.sanitize(blog.content || "");
 
   return (
     <div className="max-w-4xl mx-auto py-12 px-6">
@@ -119,25 +123,26 @@ export default async function BlogDetailPage({ params }: BlogPageProps) {
       {/* Blog Content */}
       <article
         className="prose max-w-full"
-        dangerouslySetInnerHTML={{ __html: blog.content || "" }}
+        dangerouslySetInnerHTML={{ __html: sanitizedContent }}
       />
 
       {/* Tags */}
-      {blog.tags?.length ? (
+      {blog.tags?.length > 0 && (
         <div className="mt-8">
           <h3 className="font-semibold mb-2">Tags:</h3>
           <div className="flex flex-wrap gap-2">
             {blog.tags.map((tag) => (
-              <span
+              <Link
                 key={tag}
-                className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm"
+                href={`/blog?tag=${encodeURIComponent(tag)}`}
+                className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm hover:bg-blue-200 transition"
               >
                 {tag}
-              </span>
+              </Link>
             ))}
           </div>
         </div>
-      ) : null}
+      )}
 
       {/* Prev/Next Navigation */}
       {(prevBlog || nextBlog) && (
