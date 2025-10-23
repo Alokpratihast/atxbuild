@@ -95,7 +95,7 @@ export default function Navbar() {
         </button>
 
         <button
-          onClick={() => router.push("/choose-role")}
+          onClick={() => router.push("/jobseeker/signup")}
           className={`px-4 py-2 ${isMobile ? "w-full text-left" : ""} bg-blue-600 text-white rounded hover:bg-blue-700 transition`}
         >
           Sign Up

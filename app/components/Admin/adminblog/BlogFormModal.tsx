@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState,useRef } from "react";
 import { toast } from "react-hot-toast";
 import { z } from "zod";
 import { useForm, Controller } from "react-hook-form";
@@ -49,6 +49,9 @@ export default function BlogFormModal({ blogId, onSuccess }: BlogFormModalProps)
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<OptionType[]>([]);
   const [tagsOptions, setTagsOptions] = useState<OptionType[]>([]);
+  const [titleOptions, setTitleOptions] = useState<OptionType[]>([]);
+  const [titleInput, setTitleInput] = useState("");
+
 
   const {
     register,
@@ -72,17 +75,29 @@ export default function BlogFormModal({ blogId, onSuccess }: BlogFormModalProps)
   });
 
   // ---------------- Fetch Categories & Tags ----------------
-  useEffect(() => {
-    fetch("/api/admincategory")
-      .then(res => res.json())
-      .then(data => setCategories(data.map((c: any) => ({ label: c.name, value: c.name }))))
-      .catch(() => setCategories([]));
+ useEffect(() => {
+  fetch("/api/adminblog/frontendfetchblogs/filterblog")
+    .then(res => res.json())
+    .then(data => {
+      // Convert categories, tags, and titles into react-select compatible format
+      setCategories(
+        data.categories?.map((c: string) => ({ label: c, value: c })) || []
+      );
+      setTagsOptions(
+        data.tags?.map((t: string) => ({ label: t, value: t })) || []
+      );
+      setTitleOptions(
+        data.titles?.map((t: string) => ({ label: t, value: t })) || []
+      );
+    })
+    .catch(() => {
+      setCategories([]);
+      setTagsOptions([]);
+      setTitleOptions([]);
+    });
+}, []);
 
-    fetch("/api/admintag")
-      .then(res => res.json())
-      .then(data => setTagsOptions(data.map((t: any) => ({ label: t.name, value: t.name }))))
-      .catch(() => setTagsOptions([]));
-  }, []);
+    
 
   // ---------------- Prefill Form for Editing ----------------
   useEffect(() => {
@@ -116,6 +131,27 @@ export default function BlogFormModal({ blogId, onSuccess }: BlogFormModalProps)
       .catch(() => toast.error("Failed to load blog for editing!"))
       .finally(() => setLoading(false));
   }, [blogId, reset]);
+
+  //de bounce title input for better UX
+  
+
+const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
+
+const fetchTitleOptions = (input: string) => {
+  if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+
+  debounceTimeout.current = setTimeout(async () => {
+    try {
+      const res = await fetch(`/api/adminblog/frontendfetchblogs/filterblog?search=${input}`);
+      const data = await res.json();
+      const options = data.titles.map((t: string) => ({ label: t, value: t }));
+      setTitleOptions(options);
+    } catch (err) {
+      console.error("Failed to fetch titles", err);
+    }
+  }, 300); // 300ms debounce
+};
+
 
   // ---------------- Submit Handler ----------------
   const onSubmit = async (data: BlogFormData) => {
@@ -158,11 +194,35 @@ export default function BlogFormModal({ blogId, onSuccess }: BlogFormModalProps)
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 bg-white p-6 rounded-xl shadow-md border">
       {/* Title */}
-      <div>
-        <Label>Title *</Label>
-        <Input {...register("title")} placeholder="Enter blog title" />
-        {errors.title && <p className="text-red-500 text-sm">{errors.title.message}</p>}
-      </div>
+ <div>
+  <Label>Title *</Label>
+  <Controller
+    name="title"
+    control={control}
+    render={({ field }) => (
+      <CreatableSelect<OptionType, false>
+        {...field}
+        isClearable
+        options={titleOptions}
+        value={titleOptions.find(o => o.value === field.value) || (field.value ? { label: field.value, value: field.value } : null)}
+        onInputChange={(inputValue) => {
+          setTitleInput(inputValue);
+          fetchTitleOptions(inputValue);
+        }}
+        onChange={(val: SingleValue<OptionType>) => {
+          if (val) field.onChange(val.value);
+          else field.onChange("");
+        }}
+        placeholder="Select or type title"
+        menuPortalTarget={document.body}
+        styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+      />
+    )}
+  />
+  {errors.title && <p className="text-red-500 text-sm">{errors.title.message}</p>}
+</div>
+
+
 
       {/* Content */}
       <div>
@@ -333,3 +393,5 @@ export default function BlogFormModal({ blogId, onSuccess }: BlogFormModalProps)
     </form>
   );
 }
+
+

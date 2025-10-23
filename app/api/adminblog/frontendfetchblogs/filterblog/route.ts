@@ -1,7 +1,4 @@
-///api/adminblog/frontendfetchblogs/filterblog/route.ts
-
 import { NextResponse } from "next/server";
-
 import { connectedToDatabase } from "@/lib/db";
 import Blog from "@/models/adminblog/Blog";
 
@@ -13,14 +10,16 @@ export async function GET() {
     await connectedToDatabase();
     console.log("[API] Connected to database");
 
-    // Fetch distinct categories and tags
+    // Fetch distinct categories, tags, and titles
     const categories = await Blog.distinct("category", { status: "published" });
     const tags = await Blog.distinct("tags", { status: "published" });
+    const titles = await Blog.distinct("title", { status: "published" });
 
     console.log("[API] Fetched categories:", categories);
     console.log("[API] Fetched tags:", tags);
+    console.log("[API] Fetched titles:", titles);
 
-    return NextResponse.json({ categories, tags }, { status: 200 });
+    return NextResponse.json({ categories, tags, titles }, { status: 200 });
   } catch (err: unknown) {
     console.error("[API] Error fetching filters:", err);
     const message = err instanceof Error ? err.message : String(err);
