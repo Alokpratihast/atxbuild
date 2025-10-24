@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/Admin/adminblog/ui/Input";
 import { Label } from "@/components/Admin/adminblog/ui/Label";
 import { Textarea } from "@/components/Admin/adminblog/ui/Textarea";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
 
 // ---------------- Validation Schema ----------------
 const BlogSchema = z.object({
@@ -191,6 +193,34 @@ const fetchTitleOptions = (input: string) => {
 
   const selectMenuStyles = { menuPortal: (base: any) => ({ ...base, zIndex: 9999 }) };
 
+
+  /////////////////////////////////////////////reacquil modules and formats/////////////////////////////////////////////////////
+  const quillModules = {
+  toolbar: [
+    [{ header: [1, 2, 3, false] }],
+    ["bold", "italic", "underline", "strike"],
+    [{ list: "ordered" }, { list: "bullet" }],
+    ["blockquote", "code-block"],
+    ["link", "image"],
+    ["clean"],
+  ],
+};
+
+const quillFormats = [
+  "header",
+  "bold",
+  "italic",
+  "underline",
+  "strike",
+  "list",
+  "bullet",
+  "blockquote",
+  "code-block",
+  "link",
+  "image",
+];
+
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 bg-white p-6 rounded-xl shadow-md border">
       {/* Title */}
@@ -224,16 +254,29 @@ const fetchTitleOptions = (input: string) => {
 
 
 
-      {/* Content */}
-      <div>
-        <Label>Content *</Label>
-        <Controller
-          name="content"
-          control={control}
-          render={({ field }) => <Textarea {...field} rows={6} placeholder="Enter blog content" />}
+     {/* Content */}
+<div>
+  <Label>Content *</Label>
+  <Controller
+    name="content"
+    control={control}
+    render={({ field }) => (
+      <div className="border rounded-lg overflow-hidden">
+        <ReactQuill
+          // value must be the field value (string HTML)
+          value={field.value || ""}
+          onChange={(val) => field.onChange(val)}
+          modules={quillModules}
+          formats={quillFormats}
+          theme="snow"
+          placeholder="Write your blog content here..."
         />
-        {errors.content && <p className="text-red-500 text-sm">{errors.content.message}</p>}
       </div>
+    )}
+  />
+  {errors.content && <p className="text-red-500 text-sm">{errors.content.message}</p>}
+</div>
+
 
       {/* Category */}
       <div>
