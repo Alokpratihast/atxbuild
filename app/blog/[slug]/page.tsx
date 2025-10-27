@@ -86,8 +86,14 @@ export default async function BlogDetailPage({ params }: BlogPageProps) {
       .sort({ _id: 1 })
       .lean<BlogFrontend>(),
   ]);
-
+  // Sanitize content
   const sanitizedContent = DOMPurify.sanitize(blog.content || "");
+
+  // Ensure all <a> tags open in new tab
+const withTargetBlank = sanitizedContent.replace(
+  /<a\s+(?![^>]*target=)/g,
+  '<a target="_blank" rel="noopener noreferrer" '
+);
 
   return (
     <div className="max-w-4xl mx-auto py-12 px-6">
@@ -123,7 +129,7 @@ export default async function BlogDetailPage({ params }: BlogPageProps) {
       {/* Blog Content */}
       <article
         className="prose max-w-full"
-        dangerouslySetInnerHTML={{ __html: sanitizedContent }}
+        dangerouslySetInnerHTML={{ __html: withTargetBlank }}
       />
 
       {/* Tags */}

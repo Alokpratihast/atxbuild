@@ -119,3 +119,24 @@
   }
 }
 
+/* 🟦 Make links blue in the Quill editor */
+.ql-editor a {
+  color: #007bff !important;
+  text-decoration: underline !important;
+}
+
+/* Optional hover style */
+.ql-editor a:hover {
+  color: #0056b3 !important;
+}
+
+/* 🟦 Make links blue in the rendered blog content (prose view) */
+.prose a {
+  color: #007bff;
+  text-decoration: underline;
+}
+
+.prose a:hover {
+  color: #0056b3;
+}
+

@@ -98,6 +98,8 @@ export default function AdminLoginPage() {
           )}
         </div>
 
+      
+
         {/* Error */}
         {error && <p className="text-red-600 text-center">{error}</p>}
 
