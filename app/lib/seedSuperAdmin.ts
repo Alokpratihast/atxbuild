@@ -1,6 +1,12 @@
+// 🧩 Must be first import
+import "./loadEnv";
+
+
 import { connectedToDatabase } from "@/lib/db";
 import Admin from "@/models/admin";
 import bcrypt from "bcryptjs";
+
+
 
 export async function seedSuperAdmin() {
   try {
@@ -64,4 +70,8 @@ export async function seedSuperAdmin() {
   } catch (error) {
     console.error("Error creating/updating superadmin:", error);
   }
+}
+// 👇 Add this to automatically execute when file is run directly
+if (require.main === module) {
+  seedSuperAdmin().then(() => process.exit(0));
 }
