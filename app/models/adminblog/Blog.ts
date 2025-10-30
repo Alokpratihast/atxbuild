@@ -77,5 +77,5 @@ blogSchema.pre("save", function (next) {
 // --------------------------------------------
 // Safe model export (avoids re-compilation)
 // --------------------------------------------
-const Blog = models.Blog || model<IBlog>("Blog", blogSchema);
+const Blog = models.Blog || model<IBlog>("Blog", blogSchema,"blogs");
 export default Blog;

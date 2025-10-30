@@ -21,6 +21,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
+    "express-rate-limit": "^8.2.0",
     "framer-motion": "^12.23.12",
     "handlebars": "^4.7.8",
     "imagekit": "^6.0.0",

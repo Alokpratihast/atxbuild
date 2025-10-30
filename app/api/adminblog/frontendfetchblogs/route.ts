@@ -1,61 +1,7 @@
-// // app/api/adminblog/frontendfetchblogs/route.ts
-// import { NextResponse, NextRequest } from "next/server";
-// import mongoose from "mongoose";
-// import { connectedToDatabase } from "@/lib/db";
-// import Blog, { IBlog } from "@/models/adminblog/Blog";
-
-// export const dynamic = "force-dynamic";
-
-// export async function GET(req: NextRequest) {
-//   try {
-//     await connectedToDatabase();
-
-//     const url = req.nextUrl;
-
-//     // Parse query params
-//     const limit = Math.min(Number(url.searchParams.get("limit")) || 3, 50); // max 50
-//     const cursor = url.searchParams.get("cursor"); // last blog _id from previous page
-//     const search = url.searchParams.get("search") || "";
-//     const category = url.searchParams.get("category");
-//     const tag = url.searchParams.get("tag");
-
-//     // Build filter
-//     const filter: any = { status: "published" };
-//     if (search) filter.title = { $regex: search, $options: "i" };
-//     if (category) filter.category = category;
-//     if (tag) filter.tags = { $in: tag.split(",") };
-//     if (cursor) filter._id = { $lt: new mongoose.Types.ObjectId(cursor) }; // cursor-based pagination
-
-//     // Fetch blogs
-//     const blogs: (IBlog & { _id: mongoose.Types.ObjectId })[] = await Blog.find(filter)
-//       .sort({ _id: -1 }) // newest first
-//       .limit(limit)
-//       .lean<(IBlog & { _id: mongoose.Types.ObjectId })[]>(); // Type-safe _id
-
-//     // Next cursor for "Load More"
-//     const lastBlog = blogs[blogs.length - 1];
-//     const nextCursor: string | null = lastBlog ? lastBlog._id.toString() : null;
-
-//     return NextResponse.json({
-//       blogs,
-//       nextCursor,
-//       limit,
-//     });
-
-//   } catch (err: unknown) {
-//     console.error("API error:", err);
-
-//     const message = err instanceof Error ? err.message : String(err);
-
-//     return NextResponse.json(
-//       { error: "Failed to fetch blogs", details: message },
-//       { status: 500 }
-//     );
-//   }
-// }
 
 
-// app/api/adminblog/frontendfetchblogs/route.ts// app/api/adminblog/frontendfetchblogs/route.ts
+
+// app/api/adminblog/frontendfetchblogs/route.ts// 
 import { NextResponse, NextRequest } from "next/server";
 import mongoose from "mongoose";
 import { connectedToDatabase } from "@/lib/db";

@@ -25,23 +25,33 @@ interface Option {
   label: string;
 }
 
+
+// use this when api is also on another hosted domain aur server handlingand //
+
 // const fetcher = (url: string) => fetch(url).then(res => res.json());
+// const fetcher = async (url: string) => {
+//   const baseUrl =
+//     typeof window === "undefined"
+//       ? process.env.NEXT_PUBLIC_BASE_URL 
+//       : window.location.origin;
+
+//   const fullUrl = url.startsWith("http") ? url : `${baseUrl}${url}`;
+//   const res = await fetch(fullUrl);
+
+//   if (!res.ok) {
+//     const text = await res.text();
+//     throw new Error(`Failed to fetch: ${res.status} - ${text}`);
+//   }
+
+//   return res.json();
+// };
+
 const fetcher = async (url: string) => {
-  const baseUrl =
-    typeof window === "undefined"
-      ? process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
-      : window.location.origin;
-
-  const fullUrl = url.startsWith("http") ? url : `${baseUrl}${url}`;
-  const res = await fetch(fullUrl);
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Failed to fetch: ${res.status} - ${text}`);
-  }
-
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Failed to fetch");
   return res.json();
 };
+
 
 
 
@@ -63,6 +73,19 @@ export default function BlogPage() {
   const [tagFilter, setTagFilter] = useState<Option[]>([]);
   const [categories, setCategories] = useState<Option[]>(initialCategories);
   const [tags, setTags] = useState<Option[]>(initialTags);
+
+
+  ///fetch data after filter data is loaded
+
+
+  useEffect(() => {
+  if (filterData) {
+    const mappedCategories = filterData.categories?.map((c: string) => ({ value: c, label: c })) || [];
+    const mappedTags = filterData.tags?.map((t: string) => ({ value: t, label: t })) || [];
+    setCategories(mappedCategories);
+    setTags(mappedTags);
+  }
+}, [filterData]);
 
   // -------------------- Debounce Search --------------------
   useEffect(() => {
